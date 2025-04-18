@@ -5,292 +5,18 @@ import { useRouter } from 'next/router';
 export default function FormPage() {
   const router = useRouter();
   const { uniqueId } = router.query;
-  const [formData, setFormData] = useState({});
   const [submitted, setSubmitted] = useState(false);
   
-  // Refs para os containers dinâmicos
-  const pessoasRendaContainerRef = useRef(null);
-  const dependentesContainerRef = useRef(null);
-  const listaPatrimoniosRef = useRef(null);
-  const listaDividasRef = useRef(null);
-  
-  // Estado para controlar a visibilidade das seções
+  // Estados para controlar a visibilidade das seções
   const [showPessoasRenda, setShowPessoasRenda] = useState(false);
   const [showDependentes, setShowDependentes] = useState(false);
   const [showDeclaracaoIR, setShowDeclaracaoIR] = useState(false);
-  const [showTipoFluxoCaixa, setShowTipoFluxoCaixa] = useState(false);
   const [fluxoCaixaTipo, setFluxoCaixaTipo] = useState('somado');
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
-    // Coletar todos os dados do formulário
-    const form = e.target;
-    const formElements = form.elements;
-    const formData = {};
-    
-    for (let i = 0; i < formElements.length; i++) {
-      const element = formElements[i];
-      if (element.name && element.name !== '') {
-        formData[element.name] = element.value;
-      }
-    }
-    
-    // Em uma implementação real, enviaríamos para a API
-    console.log('Formulário enviado:', formData);
-    
-    // Mostrar mensagem de sucesso
     setSubmitted(true);
   };
-  
-  // Função para formatar campos de moeda
-  const formatarMoeda = (input) => {
-    let valor = input.value.replace(/\D/g, '');
-    
-    if (valor === '') {
-      input.value = '';
-      return;
-    }
-    
-    valor = (parseFloat(valor) / 100).toFixed(2);
-    input.value = 'R$ ' + valor.replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, '.');
-  };
-  
-  // Função para adicionar pessoa com renda
-  const adicionarPessoaRenda = () => {
-    if (!pessoasRendaContainerRef.current) return;
-    
-    const id = Date.now();
-    const container = document.createElement('div');
-    container.className = 'pessoa-item';
-    container.dataset.id = id;
-    container.innerHTML = 
-      <div class="patrimonio-row">
-        <label for="nomePessoaRenda_${id}">Nome completo:</label>
-        <input type="text" id="nomePessoaRenda_${id}" name="nomePessoaRenda_${id}" placeholder="Nome completo">
-      </div>
-      
-      <div class="option-group">
-        <label id="label-precisa-concordar-${id}">Você precisa que essa pessoa concorde com suas decisões financeiras?</label>
-        <div class="option-options" role="radiogroup" aria-labelledby="label-precisa-concordar-${id}">
-          <div class="option-option">
-            <input type="radio" id="precisaConcordarSim_${id}" name="precisaConcordar${id}" value="Sim">
-            <label for="precisaConcordarSim_${id}">Sim</label>
-          </div>
-          <div class="option-option">
-            <input type="radio" id="precisaConcordarNao_${id}" name="precisaConcordar${id}" value="Não">
-            <label for="precisaConcordarNao_${id}">Não</label>
-          </div>
-        </div>
-      </div>
-      
-      <button type="button" class="delete-btn" data-id="${id}" aria-label="Excluir pessoa">Excluir</button>
-    ;
-    
-    pessoasRendaContainerRef.current.appendChild(container);
-    
-    // Adicionar evento ao botão de excluir
-    const deleteBtn = container.querySelector('.delete-btn');
-    deleteBtn.addEventListener('click', () => removerItem(deleteBtn));
-    
-    // Mostrar opção de tipo de fluxo de caixa quando houver mais de uma pessoa
-    setShowTipoFluxoCaixa(true);
-  };
-  
-  // Função para adicionar dependente
-  const adicionarDependente = () => {
-    if (!dependentesContainerRef.current) return;
-    
-    const id = Date.now();
-    const container = document.createElement('div');
-    container.className = 'dependente-item';
-    container.dataset.id = id;
-    container.innerHTML = 
-      <div class="patrimonio-row">
-        <label for="nomeDependente_${id}">Nome completo:</label>
-        <input type="text" id="nomeDependente_${id}" name="nomeDependente_${id}" placeholder="Nome completo">
-      </div>
-      
-      <div class="patrimonio-row">
-        <label for="idadeDependente_${id}">Idade:</label>
-        <input type="number" id="idadeDependente_${id}" name="idadeDependente_${id}" min="0" max="120">
-      </div>
-      
-      <button type="button" class="delete-btn" data-id="${id}" aria-label="Excluir dependente">Excluir</button>
-    ;
-    
-    dependentesContainerRef.current.appendChild(container);
-    
-    // Adicionar evento ao botão de excluir
-    const deleteBtn = container.querySelector('.delete-btn');
-    deleteBtn.addEventListener('click', () => removerItem(deleteBtn));
-  };
-  
-  // Função para adicionar patrimônio
-  const adicionarPatrimonio = () => {
-    if (!listaPatrimoniosRef.current) return;
-    
-    const id = Date.now();
-    const container = document.createElement('div');
-    container.className = 'patrimonio-item';
-    container.dataset.id = id;
-    container.innerHTML = 
-      <div class="patrimonio-row">
-        <label for="descricaoPatrimonio_${id}">Descrição do patrimônio:</label>
-        <input type="text" id="descricaoPatrimonio_${id}" name="descricaoPatrimonio_${id}" placeholder="Ex: Imóvel, Veículo, etc.">
-      </div>
-      
-      <div class="patrimonio-row">
-        <label for="valorPatrimonio_${id}">Valor estimado:</label>
-        <input type="text" id="valorPatrimonio_${id}" name="valorPatrimonio_${id}" class="moeda" placeholder="R$ 0,00">
-      </div>
-      
-      <button type="button" class="delete-btn" data-id="${id}" aria-label="Excluir patrimônio">Excluir</button>
-    ;
-    
-    listaPatrimoniosRef.current.appendChild(container);
-    
-    // Adicionar evento ao botão de excluir
-    const deleteBtn = container.querySelector('.delete-btn');
-    deleteBtn.addEventListener('click', () => removerItem(deleteBtn));
-    
-    // Adicionar formatação de moeda ao novo campo
-    const input = container.querySelector('.moeda');
-    input.addEventListener('input', (e) => formatarMoeda(e.target));
-  };
-  
-  // Função para adicionar dívida
-  const adicionarDivida = () => {
-    if (!listaDividasRef.current) return;
-    
-    const id = Date.now();
-    const container = document.createElement('div');
-    container.className = 'divida-item';
-    container.dataset.id = id;
-    container.innerHTML = 
-      <div class="patrimonio-row">
-        <label for="descricaoDivida_${id}">Descrição da dívida:</label>
-        <input type="text" id="descricaoDivida_${id}" name="descricaoDivida_${id}" placeholder="Ex: Financiamento, Empréstimo, etc.">
-      </div>
-      
-      <div class="patrimonio-row">
-        <label for="valorDivida_${id}">Valor total:</label>
-        <input type="text" id="valorDivida_${id}" name="valorDivida_${id}" class="moeda" placeholder="R$ 0,00">
-      </div>
-      
-      <div class="patrimonio-row">
-        <label for="parcelasDivida_${id}">Número de parcelas restantes:</label>
-        <input type="number" id="parcelasDivida_${id}" name="parcelasDivida_${id}" min="0">
-      </div>
-      
-      <div class="patrimonio-row">
-        <label for="valorParcelaDivida_${id}">Valor da parcela:</label>
-        <input type="text" id="valorParcelaDivida_${id}" name="valorParcelaDivida_${id}" class="moeda" placeholder="R$ 0,00">
-      </div>
-      
-      <button type="button" class="delete-btn" data-id="${id}" aria-label="Excluir dívida">Excluir</button>
-    ;
-    
-    listaDividasRef.current.appendChild(container);
-    
-    // Adicionar evento ao botão de excluir
-    const deleteBtn = container.querySelector('.delete-btn');
-    deleteBtn.addEventListener('click', () => removerItem(deleteBtn));
-    
-    // Adicionar formatação de moeda aos novos campos
-    container.querySelectorAll('.moeda').forEach(input => {
-      input.addEventListener('input', (e) => formatarMoeda(e.target));
-    });
-  };
-  
-  // Função para remover itens
-  const removerItem = (botao) => {
-    const item = botao.closest('.pessoa-item, .dependente-item, .patrimonio-item, .divida-item');
-    if (item) {
-      item.remove();
-      
-      // Verificar se ainda há pessoas com renda
-      if (pessoasRendaContainerRef.current && 
-          pessoasRendaContainerRef.current.querySelectorAll('.pessoa-item').length === 0) {
-        setShowTipoFluxoCaixa(false);
-      }
-    }
-  };
-  
-  // Configurar eventos e inicializar componentes após a renderização
-  useEffect(() => {
-    if (!uniqueId) return;
-    
-    // Configurar formatação de moeda para campos existentes
-    document.querySelectorAll('.moeda').forEach(input => {
-      input.addEventListener('input', (e) => formatarMoeda(e.target));
-    });
-    
-    // Configurar eventos para radio buttons
-    const unicaRendaSim = document.getElementById('unicaRendaSim');
-    const unicaRendaNao = document.getElementById('unicaRendaNao');
-    const temDependentesSim = document.getElementById('temDependentesSim');
-    const temDependentesNao = document.getElementById('temDependentesNao');
-    const declaraIRSim = document.getElementById('declaraIRSim');
-    const declaraIRNao = document.getElementById('declaraIRNao');
-    const fluxoCaixaSomado = document.getElementById('fluxoCaixaSomado');
-    const fluxoCaixaIndividual = document.getElementById('fluxoCaixaIndividual');
-    
-    if (unicaRendaSim) {
-      unicaRendaSim.addEventListener('change', () => setShowPessoasRenda(false));
-    }
-    
-    if (unicaRendaNao) {
-      unicaRendaNao.addEventListener('change', () => setShowPessoasRenda(true));
-    }
-    
-    if (temDependentesSim) {
-      temDependentesSim.addEventListener('change', () => setShowDependentes(true));
-    }
-    
-    if (temDependentesNao) {
-      temDependentesNao.addEventListener('change', () => setShowDependentes(false));
-    }
-    
-    if (declaraIRSim) {
-      declaraIRSim.addEventListener('change', () => setShowDeclaracaoIR(true));
-    }
-    
-    if (declaraIRNao) {
-      declaraIRNao.addEventListener('change', () => setShowDeclaracaoIR(false));
-    }
-    
-    if (fluxoCaixaSomado) {
-      fluxoCaixaSomado.addEventListener('change', () => setFluxoCaixaTipo('somado'));
-    }
-    
-    if (fluxoCaixaIndividual) {
-      fluxoCaixaIndividual.addEventListener('change', () => setFluxoCaixaTipo('individual'));
-    }
-    
-    // Configurar botões para adicionar itens
-    const btnAdicionarPessoaRenda = document.getElementById('btnAdicionarPessoaRenda');
-    const btnAdicionarDependente = document.getElementById('btnAdicionarDependente');
-    const btnAdicionarPatrimonio = document.getElementById('btnAdicionarPatrimonio');
-    const btnAdicionarDivida = document.getElementById('btnAdicionarDivida');
-    
-    if (btnAdicionarPessoaRenda) {
-      btnAdicionarPessoaRenda.addEventListener('click', adicionarPessoaRenda);
-    }
-    
-    if (btnAdicionarDependente) {
-      btnAdicionarDependente.addEventListener('click', adicionarDependente);
-    }
-    
-    if (btnAdicionarPatrimonio) {
-      btnAdicionarPatrimonio.addEventListener('click', adicionarPatrimonio);
-    }
-    
-    if (btnAdicionarDivida) {
-      btnAdicionarDivida.addEventListener('click', adicionarDivida);
-    }
-    
-  }, [uniqueId]);
 
   if (!uniqueId) {
     return <div>Carregando...</div>;
@@ -329,7 +55,7 @@ export default function FormPage() {
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
       </Head>
       
-      <style jsx global>{
+      <style jsx global>{`
         :root {
           --cor-primaria: #002d26;
           --cor-secundaria: #014034;
@@ -565,7 +291,6 @@ export default function FormPage() {
           display: none;
         }
 
-        /* Melhorias de acessibilidade */
         .sr-only {
           position: absolute;
           width: 1px;
@@ -578,7 +303,6 @@ export default function FormPage() {
           border-width: 0;
         }
 
-        /* Melhorias de responsividade */
         @media (max-width: 768px) {
           form {
             padding: 20px;
@@ -608,7 +332,6 @@ export default function FormPage() {
           }
         }
 
-        /* Animações */
         @keyframes fadeIn {
           from { opacity: 0; transform: translateY(10px); }
           to { opacity: 1; transform: translateY(0); }
@@ -618,7 +341,6 @@ export default function FormPage() {
           animation: fadeIn 0.3s ease-out;
         }
 
-        /* Tooltip para ajuda */
         .tooltip {
           position: relative;
           display: inline-block;
@@ -664,7 +386,6 @@ export default function FormPage() {
           opacity: 1;
         }
         
-        /* Estilo para pessoa fluxo de caixa */
         .pessoa-fluxo-caixa {
           margin-top: 15px;
           padding: 15px;
@@ -678,12 +399,11 @@ export default function FormPage() {
           font-size: 1rem;
         }
         
-        /* Estilo para campo de informações adicionais */
         textarea.info-adicional {
           min-height: 120px;
           resize: vertical;
         }
-      }</style>
+      `}</style>
       
       <h1>Formulário de Atendimento Financeiro</h1>
       <form id="formularioAtendimento" onSubmit={handleSubmit} noValidate>
@@ -703,26 +423,348 @@ export default function FormPage() {
             <label id="label-unica-renda">Você é a única pessoa que tem renda na sua casa?</label>
             <div className="option-options" role="radiogroup" aria-labelledby="label-unica-renda">
               <div className="option-option">
-                <input type="radio" id="unicaRendaSim" name="unicaRenda" value="Sim" />
+                <input 
+                  type="radio" 
+                  id="unicaRendaSim" 
+                  name="unicaRenda" 
+                  value="Sim" 
+                  onChange={() => setShowPessoasRenda(false)}
+                />
                 <label htmlFor="unicaRendaSim">Sim</label>
               </div>
               <div className="option-option">
-                <input type="radio" id="unicaRendaNao" name="unicaRenda" value="Não" />
+                <input 
+                  type="radio" 
+                  id="unicaRendaNao" 
+                  name="unicaRenda" 
+                  value="Não" 
+                  onChange={() => setShowPessoasRenda(true)}
+                />
                 <label htmlFor="unicaRendaNao">Não</label>
               </div>
             </div>
           </div>
           
-          <div id="listaPessoasRenda" style={{ display: showPessoasRenda ? 'block' : 'none' }}>
-            <label>Adicione as outras pessoas que têm renda na sua casa:</label>
-            <div id="pessoasRendaContainer" ref={pessoasRendaContainerRef}></div>
-            <button type="button" className="btn btn-adicionar" id="btnAdicionarPessoaRenda">
-              <span className="sr-only">Adicionar</span> Adicionar Pessoa
-            </button>
+          {showPessoasRenda && (
+            <div id="listaPessoasRenda">
+              <label>Adicione as outras pessoas que têm renda na sua casa:</label>
+              <div id="pessoasRendaContainer"></div>
+              <button type="button" className="btn btn-adicionar" id="btnAdicionarPessoaRenda">
+                <span className="sr-only">Adicionar</span> Adicionar Pessoa
+              </button>
+            </div>
+          )}
+        </div>
+
+        {/* Seção de dependentes */}
+        <div className="form-section" id="secaoDependentes">
+          <h2>Dependentes</h2>
+          <div className="option-group">
+            <label id="label-tem-dependentes">Você possui dependentes?</label>
+            <div className="option-options" role="radiogroup" aria-labelledby="label-tem-dependentes">
+              <div className="option-option">
+                <input 
+                  type="radio" 
+                  id="temDependentesSim" 
+                  name="temDependentes" 
+                  value="Sim" 
+                  onChange={() => setShowDependentes(true)}
+                />
+                <label htmlFor="temDependentesSim">Sim</label>
+              </div>
+              <div className="option-option">
+                <input 
+                  type="radio" 
+                  id="temDependentesNao" 
+                  name="temDependentes" 
+                  value="Não" 
+                  onChange={() => setShowDependentes(false)}
+                />
+                <label htmlFor="temDependentesNao">Não</label>
+              </div>
+            </div>
+          </div>
+          
+          {showDependentes && (
+            <div id="listaDependentes">
+              <label>Adicione seus dependentes:</label>
+              <div id="dependentesContainer"></div>
+              <button type="button" className="btn btn-adicionar" id="btnAdicionarDependente">
+                <span className="sr-only">Adicionar</span> Adicionar Dependente
+              </button>
+            </div>
+          )}
+        </div>
+
+        {/* Seção de patrimônios físicos */}
+        <div className="form-section">
+          <h2>Patrimônios Físicos</h2>
+          <label>Adicione seus patrimônios físicos:</label>
+          <div id="listaPatrimonios"></div>
+          <button type="button" className="btn btn-adicionar" id="btnAdicionarPatrimonio">
+            <span className="sr-only">Adicionar</span> Adicionar Patrimônio
+          </button>
+        </div>
+
+        {/* Seção de seguros e planos */}
+        <div className="form-section">
+          <h2>Seguros e Planos</h2>
+          <div className="option-group">
+            <label id="label-plano-saude">Você possui plano de saúde?</label>
+            <div className="option-options" role="radiogroup" aria-labelledby="label-plano-saude">
+              <div className="option-option">
+                <input type="radio" id="planoSaudeSim" name="planoSaude" value="Sim" />
+                <label htmlFor="planoSaudeSim">Sim</label>
+              </div>
+              <div className="option-option">
+                <input type="radio" id="planoSaudeNao" name="planoSaude" value="Não" />
+                <label htmlFor="planoSaudeNao">Não</label>
+              </div>
+              <div className="option-option">
+                <input type="radio" id="planoSaudeNaoSei" name="planoSaude" value="Não sei" />
+                <label htmlFor="planoSaudeNaoSei">Não sei</label>
+              </div>
+            </div>
+          </div>
+
+          <div id="planosSaudePessoas"></div>
+          <div id="planosSaudeDependentes"></div>
+
+          <div className="option-group">
+            <label id="label-seguro-vida">Você possui seguro de vida?</label>
+            <div className="option-options" role="radiogroup" aria-labelledby="label-seguro-vida">
+              <div className="option-option">
+                <input type="radio" id="seguroVidaSim" name="seguroVida" value="Sim" />
+                <label htmlFor="seguroVidaSim">Sim</label>
+              </div>
+              <div className="option-option">
+                <input type="radio" id="seguroVidaNao" name="seguroVida" value="Não" />
+                <label htmlFor="seguroVidaNao">Não</label>
+              </div>
+              <div className="option-option">
+                <input type="radio" id="seguroVidaNaoSei" name="seguroVida" value="Não sei" />
+                <label htmlFor="seguroVidaNaoSei">Não sei</label>
+              </div>
+            </div>
+          </div>
+
+          <div id="segurosVidaPessoas"></div>
+        </div>
+
+        {/* Seção de patrimônio líquido */}
+        <div className="form-section">
+          <h2>Patrimônio Líquido</h2>
+          <div className="form-group">
+            <label htmlFor="patrimonioLiquido">
+              Seu patrimônio líquido:
+              <div className="tooltip">
+                <span className="tooltip-icon">?</span>
+                <span className="tooltip-text">Soma de todos os seus bens menos suas dívidas</span>
+              </div>
+            </label>
+            <input type="text" id="patrimonioLiquido" name="patrimonioLiquido" className="moeda" placeholder="R$ 0,00" />
+          </div>
+          <div id="patrimoniosPessoas"></div>
+        </div>
+
+        {/* Seção de imposto de renda */}
+        <div className="form-section">
+          <h2>Imposto de Renda</h2>
+          {/* Perguntas do cliente principal */}
+          <div className="option-group">
+            <label id="label-declara-ir">Você declara imposto de renda?</label>
+            <div className="option-options" role="radiogroup" aria-labelledby="label-declara-ir">
+              <div className="option-option">
+                <input 
+                  type="radio" 
+                  id="declaraIRSim" 
+                  name="declaraIR" 
+                  value="Sim" 
+                  onChange={() => setShowDeclaracaoIR(true)}
+                />
+                <label htmlFor="declaraIRSim">Sim</label>
+              </div>
+              <div className="option-option">
+                <input 
+                  type="radio" 
+                  id="declaraIRNao" 
+                  name="declaraIR" 
+                  value="Não" 
+                  onChange={() => setShowDeclaracaoIR(false)}
+                />
+                <label htmlFor="declaraIRNao">Não</label>
+              </div>
+            </div>
+          </div>
+
+          {showDeclaracaoIR && (
+            <div id="declaracaoIRCliente">
+              <div className="option-group">
+                <label id="label-tipo-declaracao">Se sim, qual o tipo da sua declaração?</label>
+                <div className="option-options" role="radiogroup" aria-labelledby="label-tipo-declaracao">
+                  <div className="option-option">
+                    <input type="radio" id="tipoCompleta" name="tipoDeclaracao" value="Completa" />
+                    <label htmlFor="tipoCompleta">Completa</label>
+                  </div>
+                  <div className="option-option">
+                    <input type="radio" id="tipoSimplificada" name="tipoDeclaracao" value="Simplificada" />
+                    <label htmlFor="tipoSimplificada">Simplificada</label>
+                  </div>
+                  <div className="option-option">
+                    <input type="radio" id="tipoNaoSei" name="tipoDeclaracao" value="Não sei" />
+                    <label htmlFor="tipoNaoSei">Não sei</label>
+                  </div>
+                </div>
+              </div>
+
+              <div className="option-group">
+                <label id="label-resultado-ir">Resultado do seu IR:</label>
+                <div className="option-options" role="radiogroup" aria-labelledby="label-resultado-ir">
+                  <div className="option-option">
+                    <input type="radio" id="resultadoIRRestitui" name="resultadoIR" value="Restitui" />
+                    <label htmlFor="resultadoIRRestitui">Restitui</label>
+                  </div>
+                  <div className="option-option">
+                    <input type="radio" id="resultadoIRPaga" name="resultadoIR" value="Paga" />
+                    <label htmlFor="resultadoIRPaga">Paga</label>
+                  </div>
+                  <div className="option-option">
+                    <input type="radio" id="resultadoIRIsento" name="resultadoIR" value="Isento" />
+                    <label htmlFor="resultadoIRIsento">Isento</label>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          <div id="declaracoesIRPessoas"></div>
+        </div>
+
+        {/* Seção de fluxo de caixa */}
+        <div className="form-section" id="secaoFluxoCaixa">
+          <h2>Fluxo de Caixa</h2>
+          
+          <div id="fluxoCaixaSomadoContainer" style={{ display: fluxoCaixaTipo === 'somado' ? 'block' : 'none' }}>
+            <div className="form-group">
+              <label id="labelRenda" htmlFor="renda">Renda mensal:</label>
+              <input type="text" id="renda" name="renda" className="moeda" placeholder="R$ 0,00" />
+            </div>
+            <div className="form-group">
+              <label id="labelCustosFixos" htmlFor="custosFixos">
+                Custos fixos mensais:
+                <div className="tooltip">
+                  <span className="tooltip-icon">?</span>
+                  <span className="tooltip-text">Despesas que não variam mensalmente, como aluguel, financiamentos, etc.</span>
+                </div>
+              </label>
+              <input type="text" id="custosFixos" name="custosFixos" className="moeda" placeholder="R$ 0,00" />
+            </div>
+            <div className="form-group">
+              <label id="labelCustosVariaveis" htmlFor="custosVariaveis">
+                Custos variáveis mensais:
+                <div className="tooltip">
+                  <span className="tooltip-icon">?</span>
+                  <span className="tooltip-text">Despesas que podem variar mensalmente, como alimentação, lazer, etc.</span>
+                </div>
+              </label>
+              <input type="text" id="custosVariaveis" name="custosVariaveis" className="moeda" placeholder="R$ 0,00" />
+            </div>
+            <div className="form-group">
+              <label id="labelPoupanca" htmlFor="poupancaMensal">Quanto você consegue poupar todo mês:</label>
+              <input type="text" id="poupancaMensal" name="poupancaMensal" className="moeda" placeholder="R$ 0,00" />
+            </div>
+          </div>
+          
+          <div id="fluxoCaixaIndividualContainer" style={{ display: fluxoCaixaTipo === 'individual' ? 'block' : 'none' }}>
+            <div className="pessoa-fluxo-caixa">
+              <h3>Seu orçamento</h3>
+              <div className="form-group">
+                <label htmlFor="rendaCliente">Sua renda mensal:</label>
+                <input type="text" id="rendaCliente" name="rendaCliente" className="moeda" placeholder="R$ 0,00" />
+              </div>
+              <div className="form-group">
+                <label htmlFor="custosFixosCliente">
+                  Seus custos fixos mensais:
+                  <div className="tooltip">
+                    <span className="tooltip-icon">?</span>
+                    <span className="tooltip-text">Despesas que não variam mensalmente, como aluguel, financiamentos, etc.</span>
+                  </div>
+                </label>
+                <input type="text" id="custosFixosCliente" name="custosFixosCliente" className="moeda" placeholder="R$ 0,00" />
+              </div>
+              <div className="form-group">
+                <label htmlFor="custosVariaveisCliente">
+                  Seus custos variáveis mensais:
+                  <div className="tooltip">
+                    <span className="tooltip-icon">?</span>
+                    <span className="tooltip-text">Despesas que podem variar mensalmente, como alimentação, lazer, etc.</span>
+                  </div>
+                </label>
+                <input type="text" id="custosVariaveisCliente" name="custosVariaveisCliente" className="moeda" placeholder="R$ 0,00" />
+              </div>
+              <div className="form-group">
+                <label htmlFor="poupancaMensalCliente">Quanto você consegue poupar todo mês:</label>
+                <input type="text" id="poupancaMensalCliente" name="poupancaMensalCliente" className="moeda" placeholder="R$ 0,00" />
+              </div>
+            </div>
+            
+            <div id="fluxoCaixaPessoasContainer"></div>
           </div>
         </div>
 
-        {/* Restante do formulário continua igual... */}
+        {/* Seção de cartões e contas */}
+        <div className="form-section" id="secaoCartoesContas">
+          <h2>Cartões e Contas</h2>
+          
+          <div className="option-group">
+            <label id="labelMilhas" htmlFor="usaMilhas">Você reduz custos de viagens utilizando milhas com frequência?</label>
+            <div className="option-options" role="radiogroup" aria-labelledby="labelMilhas">
+              <div className="option-option">
+                <input type="radio" id="usaMilhasSim" name="usaMilhas" value="Sim" />
+                <label htmlFor="usaMilhasSim">Sim</label>
+              </div>
+              <div className="option-option">
+                <input type="radio" id="usaMilhasNao" name="usaMilhas" value="Não" />
+                <label htmlFor="usaMilhasNao">Não</label>
+              </div>
+            </div>
+          </div>
+
+          <div className="option-group">
+            <label id="label-sem-tarifas">Seus cartões e contas são livres de tarifas?</label>
+            <div className="option-options" role="radiogroup" aria-labelledby="label-sem-tarifas">
+              <div className="option-option">
+                <input type="radio" id="semTarifasSim" name="semTarifas" value="Sim" />
+                <label htmlFor="semTarifasSim">Sim</label>
+              </div>
+              <div className="option-option">
+                <input type="radio" id="semTarifasNao" name="semTarifas" value="Não" />
+                <label htmlFor="semTarifasNao">Não</label>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        {/* Seção de dívidas */}
+        <div className="form-section" id="secaoDividas">
+          <h2>Dívidas</h2>
+          <label>Adicione suas dívidas:</label>
+          <div id="listaDividas"></div>
+          <button type="button" className="btn btn-adicionar" id="btnAdicionarDivida">
+            <span className="sr-only">Adicionar</span> Adicionar Dívida
+          </button>
+        </div>
+
+        {/* Seção de informações adicionais */}
+        <div className="form-section" id="secaoInfoAdicional">
+          <h2>Informações Adicionais</h2>
+          <div className="form-group">
+            <label htmlFor="infoAdicional">Existe alguma informação que você julgue relevante informar?</label>
+            <textarea id="infoAdicional" name="infoAdicional" className="info-adicional" placeholder="Digite aqui qualquer informação adicional que você considere importante..."></textarea>
+          </div>
+        </div>
+
+        <button type="submit" className="btn btn-enviar" id="btnEnviar">Enviar Formulário</button>
       </form>
     </>
   );
