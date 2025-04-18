@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
-import { signIn, getCsrfToken } from 'next-auth/react';
+import { useState } from 'react';
+import { signIn } from 'next-auth/react';
 import { useRouter } from 'next/router';
+import Head from 'next/head';
 
-export default function Login({ csrfToken }) {
-  const [email, setEmail] = useState('');
+export default function Login() {
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -22,161 +23,121 @@ export default function Login({ csrfToken }) {
       });
 
       if (result.error) {
-        setError('Email ou senha inválidos');
+        setError('Credenciais inválidas. Tente novamente.');
         setLoading(false);
       } else {
         router.push('/admin/dashboard');
       }
-    } catch (err) {
-      setError('Ocorreu um erro ao fazer login');
+    } catch (error) {
+      setError('Ocorreu um erro. Tente novamente.');
       setLoading(false);
     }
   };
 
   return (
-    <div className="login-container">
-      <div className="login-form-container">
-        <h1>Login Administrativo</h1>
-        <p>Acesse o painel para gerenciar formulários</p>
-
-        {error && <div className="error-message">{error}</div>}
-
-        <form onSubmit={handleSubmit} className="login-form">
-          <input name="csrfToken" type="hidden" defaultValue={csrfToken} />
-          
-          <div className="form-group">
-  <label htmlFor="username">Nome de usuário</label>
-  <input
-    type="text"
-    id="username"
-    name="username"
-    value={email}
-    onChange={(e) => setEmail(e.target.value)}
-    required
-  />
-</div>
-
-
-          <div className="form-group">
-            <label htmlFor="password">Senha</label>
+    <div style={{ 
+      backgroundColor: '#002d26', 
+      minHeight: '100vh', 
+      display: 'flex', 
+      alignItems: 'center', 
+      justifyContent: 'center',
+      color: 'white'
+    }}>
+      <Head>
+        <title>Login Administrativo</title>
+      </Head>
+      <div style={{ 
+        backgroundColor: '#014034', 
+        padding: '30px', 
+        borderRadius: '8px', 
+        width: '100%', 
+        maxWidth: '400px'
+      }}>
+        <h1 style={{ 
+          color: '#ffd700', 
+          textAlign: 'center', 
+          marginBottom: '20px' 
+        }}>Login Administrativo</h1>
+        <p style={{ textAlign: 'center', marginBottom: '20px' }}>
+          Acesse o painel para gerenciar formulários
+        </p>
+        
+        {error && (
+          <div style={{ 
+            backgroundColor: '#ff6b6b', 
+            color: 'white', 
+            padding: '10px', 
+            borderRadius: '5px', 
+            marginBottom: '20px',
+            textAlign: 'center'
+          }}>
+            {error}
+          </div>
+        )}
+        
+        <form onSubmit={handleSubmit}>
+          <div style={{ marginBottom: '15px' }}>
+            <label htmlFor="username" style={{ display: 'block', marginBottom: '8px' }}>
+              Usuário
+            </label>
             <input
-              id="password"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              type="text"
+              id="username"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              style={{ 
+                width: '100%', 
+                padding: '12px', 
+                borderRadius: '5px', 
+                border: 'none' 
+              }}
               required
             />
           </div>
-
-          <button type="submit" className="login-button" disabled={loading}>
-            {loading ? 'Entrando...' : 'Entrar'}
+          
+          <div style={{ marginBottom: '20px' }}>
+            <label htmlFor="password" style={{ display: 'block', marginBottom: '8px' }}>
+              Senha
+            </label>
+            <input
+              type="password"
+              id="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              style={{ 
+                width: '100%', 
+                padding: '12px', 
+                borderRadius: '5px', 
+                border: 'none' 
+              }}
+              required
+            />
+          </div>
+          
+          <button
+            type="submit"
+            disabled={loading}
+            style={{ 
+              backgroundColor: '#ffd700', 
+              color: '#002d26', 
+              padding: '12px', 
+              borderRadius: '5px', 
+              border: 'none', 
+              width: '100%', 
+              fontWeight: 'bold',
+              cursor: loading ? 'not-allowed' : 'pointer',
+              opacity: loading ? 0.7 : 1
+            }}
+          >
+            {loading ? 'Processando...' : 'Entrar'}
           </button>
+          
+          <div style={{ marginTop: '20px', textAlign: 'center', fontSize: '14px' }}>
+            <p>Usuário padrão: <strong>admin</strong></p>
+            <p>Senha padrão: <strong>admin123</strong></p>
+          </div>
         </form>
       </div>
-
-      <style jsx>{`
-        .login-container {
-          min-height: 100vh;
-          display: flex;
-          justify-content: center;
-          align-items: center;
-          background-color: #002d26;
-          padding: 20px;
-        }
-
-        .login-form-container {
-          background-color: #014034;
-          padding: 40px;
-          border-radius: 8px;
-          width: 100%;
-          max-width: 400px;
-          box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-        }
-
-        h1 {
-          color: #ffd700;
-          margin-bottom: 10px;
-          text-align: center;
-        }
-
-        p {
-          color: #ffffff;
-          margin-bottom: 30px;
-          text-align: center;
-        }
-
-        .login-form {
-          display: flex;
-          flex-direction: column;
-        }
-
-        .form-group {
-          margin-bottom: 20px;
-        }
-
-        label {
-          display: block;
-          margin-bottom: 5px;
-          color: #ffffff;
-          font-weight: bold;
-        }
-
-        input {
-          width: 100%;
-          padding: 12px;
-          border-radius: 5px;
-          border: 1px solid transparent;
-          background-color: #f5f5f5;
-          font-size: 16px;
-        }
-
-        input:focus {
-          outline: none;
-          border-color: #ffd700;
-          box-shadow: 0 0 0 2px rgba(255, 215, 0, 0.3);
-        }
-
-        .login-button {
-          background-color: #ffd700;
-          color: #002d26;
-          border: none;
-          padding: 15px;
-          border-radius: 5px;
-          font-size: 16px;
-          font-weight: bold;
-          cursor: pointer;
-          transition: all 0.3s ease;
-          margin-top: 10px;
-        }
-
-        .login-button:hover {
-          background-color: #ffc400;
-          transform: translateY(-2px);
-        }
-
-        .login-button:disabled {
-          background-color: #cccccc;
-          cursor: not-allowed;
-          transform: none;
-        }
-
-        .error-message {
-          background-color: #ff6b6b;
-          color: white;
-          padding: 10px;
-          border-radius: 5px;
-          margin-bottom: 20px;
-          text-align: center;
-        }
-      `}</style>
     </div>
   );
-}
-
-export async function getServerSideProps(context) {
-  return {
-    props: {
-      csrfToken: await getCsrfToken(context),
-    },
-  };
 }
