@@ -17,7 +17,7 @@ export default function Login({ csrfToken }) {
     try {
       const result = await signIn('credentials', {
         redirect: false,
-        email,
+        username,
         password,
       });
 
@@ -45,15 +45,17 @@ export default function Login({ csrfToken }) {
           <input name="csrfToken" type="hidden" defaultValue={csrfToken} />
           
           <div className="form-group">
-            <label htmlFor="email">Email</label>
-            <input
-              id="email"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-            />
-          </div>
+  <label htmlFor="username">Nome de usuário</label>
+  <input
+    type="text"
+    id="username"
+    name="username"
+    value={email}
+    onChange={(e) => setEmail(e.target.value)}
+    required
+  />
+</div>
+
 
           <div className="form-group">
             <label htmlFor="password">Senha</label>
