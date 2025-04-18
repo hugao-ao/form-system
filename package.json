@@ -5,15 +5,10 @@
   "main": "index.js",
   "scripts": {
     "dev": "next dev",
-    "build": "next build && next export",
+    "build": "next build",
     "start": "next start",
     "lint": "next lint"
   },
-  "scripts": {
-  "dev": "next dev",
-  "build": "next build && next export",
-  "start": "next start"
-},
   "keywords": [
     "formulários",
     "nextjs",
