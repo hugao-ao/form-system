@@ -1,35 +1,96 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
+import { useSession, signOut } from 'next-auth/react';
 
 export default function Dashboard() {
   const [activeTab, setActiveTab] = useState('pendentes');
+  const [formData, setFormData] = useState({ pendentes: [], preenchidos: [] });
+  const [loading, setLoading] = useState(true);
   const router = useRouter();
+  const { data: session, status } = useSession();
 
-  // Dados de demonstração
-  const dadosDemo = {
-    pendentes: [
-      { id: '1', nome: 'João Silva', email: 'joao@exemplo.com', data: '15/04/2025' },
-      { id: '2', nome: 'Maria Oliveira', email: 'maria@exemplo.com', data: '16/04/2025' },
-    ],
-    preenchidos: [
-      { id: '3', nome: 'Carlos Santos', email: 'carlos@exemplo.com', data: '10/04/2025' },
-      { id: '4', nome: 'Ana Pereira', email: 'ana@exemplo.com', data: '12/04/2025' },
-      { id: '5', nome: 'Roberto Lima', email: 'roberto@exemplo.com', data: '14/04/2025' },
-    ]
+  useEffect(() => {
+    if (status === 'unauthenticated') {
+      router.push('/admin/login');
+    } else if (status === 'authenticated') {
+      fetchFormData();
+    }
+  }, [status, router]);
+
+  const fetchFormData = async () => {
+    try {
+      const response = await fetch('/api/forms');
+      if (response.ok) {
+        const data = await response.json();
+        
+        // Separar formulários pendentes e preenchidos
+        const pendentes = data.filter(form => !form.isUsed);
+        const preenchidos = data.filter(form => form.isUsed);
+        
+        setFormData({ pendentes, preenchidos });
+      }
+    } catch (error) {
+      console.error('Erro ao buscar dados:', error);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    await signOut({ redirect: false });
     router.push('/admin/login');
   };
 
-  const handleGerarLink = () => {
-    alert('Funcionalidade de geração de link será implementada em breve!');
+  const handleGerarLink = async () => {
+    const clientName = prompt('Nome do cliente:');
+    if (!clientName) return;
+    
+    const clientEmail = prompt('Email do cliente (opcional):');
+    
+    try {
+      const response = await fetch('/api/forms/generate', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ 
+          clientName, 
+          clientEmail: clientEmail || '' 
+        }),
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        alert(`Link gerado com sucesso!\n\n${window.location.origin}/form/${data.uniqueId}`);
+        fetchFormData(); // Atualiza a lista
+      } else {
+        alert('Erro ao gerar link. Tente novamente.');
+      }
+    } catch (error) {
+      console.error('Erro:', error);
+      alert('Erro ao gerar link. Tente novamente.');
+    }
   };
 
   const handleVerDetalhes = (id) => {
-    alert(`Detalhes do formulário ${id} serão implementados em breve!`);
+    router.push(`/admin/forms/${id}`);
   };
+
+  if (status === 'loading' || loading) {
+    return (
+      <div style={{ 
+        backgroundColor: '#002d26', 
+        minHeight: '100vh', 
+        display: 'flex', 
+        alignItems: 'center', 
+        justifyContent: 'center',
+        color: 'white'
+      }}>
+        <p>Carregando...</p>
+      </div>
+    );
+  }
 
   return (
     <div style={{ backgroundColor: '#002d26', minHeight: '100vh', color: 'white', padding: '20px' }}>
@@ -75,7 +136,7 @@ export default function Dashboard() {
             textAlign: 'center'
           }}>
             <h3>Formulários Pendentes</h3>
-            <p style={{ fontSize: '24px', fontWeight: 'bold' }}>{dadosDemo.pendentes.length}</p>
+            <p style={{ fontSize: '24px', fontWeight: 'bold' }}>{formData.pendentes.length}</p>
           </div>
           <div style={{ 
             backgroundColor: '#015c4a', 
@@ -85,7 +146,7 @@ export default function Dashboard() {
             textAlign: 'center'
           }}>
             <h3>Formulários Preenchidos</h3>
-            <p style={{ fontSize: '24px', fontWeight: 'bold' }}>{dadosDemo.preenchidos.length}</p>
+            <p style={{ fontSize: '24px', fontWeight: 'bold' }}>{formData.preenchidos.length}</p>
           </div>
         </div>
       </div>
@@ -161,14 +222,16 @@ export default function Dashboard() {
             </tr>
           </thead>
           <tbody>
-            {dadosDemo[activeTab].map((item) => (
-              <tr key={item.id} style={{ borderBottom: '1px solid #015c4a' }}>
-                <td style={{ padding: '10px' }}>{item.nome}</td>
-                <td style={{ padding: '10px' }}>{item.email}</td>
-                <td style={{ padding: '10px' }}>{item.data}</td>
+            {formData[activeTab].map((item) => (
+              <tr key={item._id} style={{ borderBottom: '1px solid #015c4a' }}>
+                <td style={{ padding: '10px' }}>{item.clientName}</td>
+                <td style={{ padding: '10px' }}>{item.clientEmail || '-'}</td>
+                <td style={{ padding: '10px' }}>
+                  {new Date(item.createdAt).toLocaleDateString('pt-BR')}
+                </td>
                 <td style={{ padding: '10px', textAlign: 'center' }}>
                   <button 
-                    onClick={() => handleVerDetalhes(item.id)}
+                    onClick={() => handleVerDetalhes(item._id)}
                     style={{ 
                       backgroundColor: '#016857', 
                       color: 'white', 
@@ -186,17 +249,18 @@ export default function Dashboard() {
           </tbody>
         </table>
         
-        {dadosDemo[activeTab].length === 0 && (
+        {formData[activeTab].length === 0 && (
           <p style={{ textAlign: 'center', padding: '20px' }}>
             Nenhum formulário {activeTab === 'pendentes' ? 'pendente' : 'preenchido'} encontrado.
           </p>
         )}
       </div>
-      
-      <div style={{ marginTop: '30px', textAlign: 'center', fontSize: '14px', color: '#aaa' }}>
-        <p>Sistema de Formulários Personalizados - Versão de Demonstração</p>
-        <p>Esta é uma versão de demonstração com dados fictícios.</p>
-      </div>
     </div>
   );
+}
+
+export async function getServerSideProps(context) {
+  return {
+    props: {}
+  };
 }
