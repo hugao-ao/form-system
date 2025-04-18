@@ -64,7 +64,7 @@ export default function FormPage() {
     const container = document.createElement('div');
     container.className = 'pessoa-item';
     container.dataset.id = id;
-    container.innerHTML = `
+    container.innerHTML = 
       <div class="patrimonio-row">
         <label for="nomePessoaRenda_${id}">Nome completo:</label>
         <input type="text" id="nomePessoaRenda_${id}" name="nomePessoaRenda_${id}" placeholder="Nome completo">
@@ -85,7 +85,7 @@ export default function FormPage() {
       </div>
       
       <button type="button" class="delete-btn" data-id="${id}" aria-label="Excluir pessoa">Excluir</button>
-    `;
+    ;
     
     pessoasRendaContainerRef.current.appendChild(container);
     
@@ -105,7 +105,7 @@ export default function FormPage() {
     const container = document.createElement('div');
     container.className = 'dependente-item';
     container.dataset.id = id;
-    container.innerHTML = `
+    container.innerHTML = 
       <div class="patrimonio-row">
         <label for="nomeDependente_${id}">Nome completo:</label>
         <input type="text" id="nomeDependente_${id}" name="nomeDependente_${id}" placeholder="Nome completo">
@@ -117,7 +117,7 @@ export default function FormPage() {
       </div>
       
       <button type="button" class="delete-btn" data-id="${id}" aria-label="Excluir dependente">Excluir</button>
-    `;
+    ;
     
     dependentesContainerRef.current.appendChild(container);
     
@@ -134,7 +134,7 @@ export default function FormPage() {
     const container = document.createElement('div');
     container.className = 'patrimonio-item';
     container.dataset.id = id;
-    container.innerHTML = `
+    container.innerHTML = 
       <div class="patrimonio-row">
         <label for="descricaoPatrimonio_${id}">Descrição do patrimônio:</label>
         <input type="text" id="descricaoPatrimonio_${id}" name="descricaoPatrimonio_${id}" placeholder="Ex: Imóvel, Veículo, etc.">
@@ -146,7 +146,7 @@ export default function FormPage() {
       </div>
       
       <button type="button" class="delete-btn" data-id="${id}" aria-label="Excluir patrimônio">Excluir</button>
-    `;
+    ;
     
     listaPatrimoniosRef.current.appendChild(container);
     
@@ -167,7 +167,7 @@ export default function FormPage() {
     const container = document.createElement('div');
     container.className = 'divida-item';
     container.dataset.id = id;
-    container.innerHTML = `
+    container.innerHTML = 
       <div class="patrimonio-row">
         <label for="descricaoDivida_${id}">Descrição da dívida:</label>
         <input type="text" id="descricaoDivida_${id}" name="descricaoDivida_${id}" placeholder="Ex: Financiamento, Empréstimo, etc.">
@@ -189,7 +189,7 @@ export default function FormPage() {
       </div>
       
       <button type="button" class="delete-btn" data-id="${id}" aria-label="Excluir dívida">Excluir</button>
-    `;
+    ;
     
     listaDividasRef.current.appendChild(container);
     
@@ -329,7 +329,7 @@ export default function FormPage() {
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
       </Head>
       
-      <style jsx global>{`
+      <style jsx global>{
         :root {
           --cor-primaria: #002d26;
           --cor-secundaria: #014034;
@@ -683,7 +683,7 @@ export default function FormPage() {
           min-height: 120px;
           resize: vertical;
         }
-      `}</style>
+      }</style>
       
       <h1>Formulário de Atendimento Financeiro</h1>
       <form id="formularioAtendimento" onSubmit={handleSubmit} noValidate>
