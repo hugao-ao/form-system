@@ -4,11 +4,11 @@
   "description": "Sistema de formulários personalizados com links únicos",
   "main": "index.js",
   "scripts": {
-    "dev": "next dev",
-    "build": "next build",
-    "start": "next start",
-    "lint": "next lint"
-  },
+  "dev": "next dev",
+  "build": "next build && next export",
+  "start": "next start"
+}
+,
   "keywords": [
     "formulários",
     "nextjs",
