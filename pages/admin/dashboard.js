@@ -64,35 +64,45 @@ export default function Dashboard() {
     router.push('/admin/login');
   };
 
-  const handleGerarLink = async () => {
-    const clientName = prompt('Nome do cliente:');
-    if (!clientName) return;
+ const handleGerarLink = async () => {
+  const clientName = prompt('Nome do cliente:');
+  if (!clientName) return;
+  
+  const clientEmail = prompt('Email do cliente (opcional):');
+  
+  try {
+    // Simulando geração de link
+    const uniqueId = Math.random().toString(36).substring(2, 15);
+    const fullLink = `${window.location.origin}/form/${uniqueId}`;
     
-    const clientEmail = prompt('Email do cliente (opcional):');
+    // Copiar link para a área de transferência
+    navigator.clipboard.writeText(fullLink)
+      .then(() => {
+        alert(`Link gerado e copiado para a área de transferência!\n\n${fullLink}`);
+      })
+      .catch(() => {
+        alert(`Link gerado com sucesso!\n\n${fullLink}\n\nCopie manualmente o link acima.`);
+      });
     
-    try {
-      // Simulando geração de link
-      const uniqueId = Math.random().toString(36).substring(2, 15);
-      alert(`Link gerado com sucesso!\n\n${window.location.origin}/form/${uniqueId}`);
-      
-      // Atualizar a lista com o novo link
-      setFormData(prev => ({
-        ...prev,
-        pendentes: [
-          {
-            _id: Date.now().toString(),
-            clientName,
-            clientEmail: clientEmail || '-',
-            createdAt: new Date()
-          },
-          ...prev.pendentes
-        ]
-      }));
-    } catch (error) {
-      console.error('Erro:', error);
-      alert('Erro ao gerar link. Tente novamente.');
-    }
-  };
+    // Atualizar a lista com o novo link
+    setFormData(prev => ({
+      ...prev,
+      pendentes: [
+        {
+          _id: Date.now().toString(),
+          clientName,
+          clientEmail: clientEmail || '-',
+          createdAt: new Date()
+        },
+        ...prev.pendentes
+      ]
+    }));
+  } catch (error) {
+    console.error('Erro:', error);
+    alert('Erro ao gerar link. Tente novamente.');
+  }
+};
+
 
   const handleVerDetalhes = (id) => {
     alert(`Detalhes do formulário ${id} serão exibidos em breve.`);
