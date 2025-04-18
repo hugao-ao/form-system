@@ -64,49 +64,59 @@ export default function Dashboard() {
     router.push('/admin/login');
   };
 
- const handleGerarLink = async () => {
-  const clientName = prompt('Nome do cliente:');
-  if (!clientName) return;
-  
-  const clientEmail = prompt('Email do cliente (opcional):');
-  
-  try {
-    // Simulando geração de link
-    const uniqueId = Math.random().toString(36).substring(2, 15);
-    const fullLink = `${window.location.origin}/form/${uniqueId}`;
+  const handleGerarLink = async () => {
+    const clientName = prompt('Nome do cliente:');
+    if (!clientName) return;
     
-    // Copiar link para a área de transferência
-    navigator.clipboard.writeText(fullLink)
-      .then(() => {
-        alert(`Link gerado e copiado para a área de transferência!\n\n${fullLink}`);
-      })
-      .catch(() => {
-        alert(`Link gerado com sucesso!\n\n${fullLink}\n\nCopie manualmente o link acima.`);
-      });
+    const clientEmail = prompt('Email do cliente (opcional):');
     
-    // Atualizar a lista com o novo link
-    setFormData(prev => ({
-      ...prev,
-      pendentes: [
-        {
-          _id: Date.now().toString(),
-          clientName,
-          clientEmail: clientEmail || '-',
-          createdAt: new Date()
-        },
-        ...prev.pendentes
-      ]
-    }));
-  } catch (error) {
-    console.error('Erro:', error);
-    alert('Erro ao gerar link. Tente novamente.');
-  }
-};
-
+    try {
+      // Simulando geração de link
+      const uniqueId = Math.random().toString(36).substring(2, 15);
+      const fullLink = `${window.location.origin}/form/${uniqueId}`;
+      
+      // Copiar link para a área de transferência
+      navigator.clipboard.writeText(fullLink)
+        .then(() => {
+          alert(`Link gerado e copiado para a área de transferência!\n\n${fullLink}`);
+        })
+        .catch(() => {
+          alert(`Link gerado com sucesso!\n\n${fullLink}\n\nCopie manualmente o link acima.`);
+        });
+      
+      // Atualizar a lista com o novo link
+      setFormData(prev => ({
+        ...prev,
+        pendentes: [
+          {
+            _id: Date.now().toString(),
+            clientName,
+            clientEmail: clientEmail || '-',
+            createdAt: new Date()
+          },
+          ...prev.pendentes
+        ]
+      }));
+    } catch (error) {
+      console.error('Erro:', error);
+      alert('Erro ao gerar link. Tente novamente.');
+    }
+  };
 
   const handleVerDetalhes = (id) => {
     alert(`Detalhes do formulário ${id} serão exibidos em breve.`);
     // router.push(`/admin/forms/${id}`);
+  };
+
+  const handleExcluirFormulario = (id) => {
+    if (confirm('Tem certeza que deseja excluir este formulário?')) {
+      setFormData(prev => ({
+        ...prev,
+        pendentes: prev.pendentes.filter(item => item._id !== id),
+        preenchidos: prev.preenchidos.filter(item => item._id !== id)
+      }));
+      alert('Formulário excluído com sucesso!');
+    }
   };
 
   if (loading) {
@@ -262,19 +272,34 @@ export default function Dashboard() {
                   {new Date(item.createdAt).toLocaleDateString('pt-BR')}
                 </td>
                 <td style={{ padding: '10px', textAlign: 'center' }}>
-                  <button 
-                    onClick={() => handleVerDetalhes(item._id)}
-                    style={{ 
-                      backgroundColor: '#016857', 
-                      color: 'white', 
-                      padding: '8px 12px', 
-                      borderRadius: '5px', 
-                      border: 'none',
-                      cursor: 'pointer'
-                    }}
-                  >
-                    Ver Detalhes
-                  </button>
+                  <div style={{ display: 'flex', gap: '5px', justifyContent: 'center' }}>
+                    <button 
+                      onClick={() => handleVerDetalhes(item._id)}
+                      style={{ 
+                        backgroundColor: '#016857', 
+                        color: 'white', 
+                        padding: '8px 12px', 
+                        borderRadius: '5px', 
+                        border: 'none',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      Ver Detalhes
+                    </button>
+                    <button 
+                      onClick={() => handleExcluirFormulario(item._id)}
+                      style={{ 
+                        backgroundColor: '#ff6b6b', 
+                        color: 'white', 
+                        padding: '8px 12px', 
+                        borderRadius: '5px', 
+                        border: 'none',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      Excluir
+                    </button>
+                  </div>
                 </td>
               </tr>
             ))}
