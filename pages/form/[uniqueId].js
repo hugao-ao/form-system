@@ -759,45 +759,6 @@ export default function FormPage() {
                       />
                     </div>
                     
-                    {/* Plano de saúde para dependente */}
-                    <div className="option-group">
-                      <label id={`label-plano-saude-dependente-${dependente.id}`}>
-                        {dependente.nome || 'Este dependente'} possui plano de saúde?
-                      </label>
-                      <div className="option-options" role="radiogroup" aria-labelledby={`label-plano-saude-dependente-${dependente.id}`}>
-                        <div className="option-option">
-                          <input 
-                            type="radio" 
-                            id={`planoSaudeDependenteSim_${dependente.id}`} 
-                            name={`planoSaudeDependente_${dependente.id}`} 
-                            value="Sim"
-                            onChange={() => atualizarDependente(dependente.id, 'planoSaude', 'Sim')}
-                          />
-                          <label htmlFor={`planoSaudeDependenteSim_${dependente.id}`}>Sim</label>
-                        </div>
-                        <div className="option-option">
-                          <input 
-                            type="radio" 
-                            id={`planoSaudeDependenteNao_${dependente.id}`} 
-                            name={`planoSaudeDependente_${dependente.id}`} 
-                            value="Não"
-                            onChange={() => atualizarDependente(dependente.id, 'planoSaude', 'Não')}
-                          />
-                          <label htmlFor={`planoSaudeDependenteNao_${dependente.id}`}>Não</label>
-                        </div>
-                        <div className="option-option">
-                          <input 
-                            type="radio" 
-                            id={`planoSaudeDependenteNaoSei_${dependente.id}`} 
-                            name={`planoSaudeDependente_${dependente.id}`} 
-                            value="Não sei"
-                            onChange={() => atualizarDependente(dependente.id, 'planoSaude', 'Não sei')}
-                          />
-                          <label htmlFor={`planoSaudeDependenteNaoSei_${dependente.id}`}>Não sei</label>
-                        </div>
-                      </div>
-                    </div>
-                    
                     <button 
                       type="button" 
                       className="delete-btn" 
@@ -935,10 +896,9 @@ export default function FormPage() {
 
           {/* Planos de saúde das outras pessoas com renda */}
           {pessoasRenda.length > 0 && (
-            <div className="pessoa-info">
-              <h3>Planos de saúde das outras pessoas com renda</h3>
+            <div className="option-group">
               {pessoasRenda.map(pessoa => (
-                <div key={`plano-saude-${pessoa.id}`} className="option-group">
+                <div key={`plano-saude-${pessoa.id}`}>
                   <label id={`label-plano-saude-pessoa-${pessoa.id}`}>
                     {pessoa.nome || 'Esta pessoa'} possui plano de saúde?
                   </label>
@@ -978,6 +938,51 @@ export default function FormPage() {
               ))}
             </div>
           )}
+          
+          {/* Planos de saúde dos dependentes */}
+          {dependentes.length > 0 && (
+            <div className="option-group">
+              {dependentes.map(dependente => (
+                <div key={`plano-saude-dependente-${dependente.id}`}>
+                  <label id={`label-plano-saude-dependente-${dependente.id}`}>
+                    {dependente.nome || 'Este dependente'} possui plano de saúde?
+                  </label>
+                  <div className="option-options" role="radiogroup" aria-labelledby={`label-plano-saude-dependente-${dependente.id}`}>
+                    <div className="option-option">
+                      <input 
+                        type="radio" 
+                        id={`planoSaudeDependenteSim_${dependente.id}`} 
+                        name={`planoSaudeDependente_${dependente.id}`} 
+                        value="Sim"
+                        onChange={() => atualizarDependente(dependente.id, 'planoSaude', 'Sim')}
+                      />
+                      <label htmlFor={`planoSaudeDependenteSim_${dependente.id}`}>Sim</label>
+                    </div>
+                    <div className="option-option">
+                      <input 
+                        type="radio" 
+                        id={`planoSaudeDependenteNao_${dependente.id}`} 
+                        name={`planoSaudeDependente_${dependente.id}`} 
+                        value="Não"
+                        onChange={() => atualizarDependente(dependente.id, 'planoSaude', 'Não')}
+                      />
+                      <label htmlFor={`planoSaudeDependenteNao_${dependente.id}`}>Não</label>
+                    </div>
+                    <div className="option-option">
+                      <input 
+                        type="radio" 
+                        id={`planoSaudeDependenteNaoSei_${dependente.id}`} 
+                        name={`planoSaudeDependente_${dependente.id}`} 
+                        value="Não sei"
+                        onChange={() => atualizarDependente(dependente.id, 'planoSaude', 'Não sei')}
+                      />
+                      <label htmlFor={`planoSaudeDependenteNaoSei_${dependente.id}`}>Não sei</label>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
 
           {/* Seguro de vida do cliente principal */}
           <div className="option-group">
@@ -1000,10 +1005,9 @@ export default function FormPage() {
 
           {/* Seguros de vida das outras pessoas com renda */}
           {pessoasRenda.length > 0 && (
-            <div className="pessoa-info">
-              <h3>Seguros de vida das outras pessoas com renda</h3>
+            <div className="option-group">
               {pessoasRenda.map(pessoa => (
-                <div key={`seguro-vida-${pessoa.id}`} className="option-group">
+                <div key={`seguro-vida-${pessoa.id}`}>
                   <label id={`label-seguro-vida-pessoa-${pessoa.id}`}>
                     {pessoa.nome || 'Esta pessoa'} possui seguro de vida?
                   </label>
@@ -1069,31 +1073,26 @@ export default function FormPage() {
           </div>
           
           {/* Patrimônio líquido das outras pessoas com renda */}
-          {pessoasRenda.length > 0 && (
-            <div className="pessoa-info">
-              <h3>Patrimônio líquido das outras pessoas com renda</h3>
-              {pessoasRenda.map(pessoa => (
-                <div key={`patrimonio-liquido-${pessoa.id}`} className="form-group">
-                  <label htmlFor={`patrimonioLiquidoPessoa_${pessoa.id}`}>
-                    Patrimônio líquido de {pessoa.nome || 'esta pessoa'}:
-                    <div className="tooltip">
-                      <span className="tooltip-icon">?</span>
-                      <span className="tooltip-text">Soma de todos os bens menos as dívidas</span>
-                    </div>
-                  </label>
-                  <input 
-                    type="text" 
-                    id={`patrimonioLiquidoPessoa_${pessoa.id}`} 
-                    name={`patrimonioLiquidoPessoa_${pessoa.id}`} 
-                    className="moeda" 
-                    placeholder="R$ 0,00" 
-                    onChange={handleMoedaChange}
-                    onBlur={(e) => atualizarPessoaRenda(pessoa.id, 'patrimonioLiquido', e.target.value)}
-                  />
+          {pessoasRenda.map(pessoa => (
+            <div key={`patrimonio-liquido-${pessoa.id}`} className="form-group">
+              <label htmlFor={`patrimonioLiquidoPessoa_${pessoa.id}`}>
+                Patrimônio líquido de {pessoa.nome || 'esta pessoa'}:
+                <div className="tooltip">
+                  <span className="tooltip-icon">?</span>
+                  <span className="tooltip-text">Soma de todos os bens menos as dívidas</span>
                 </div>
-              ))}
+              </label>
+              <input 
+                type="text" 
+                id={`patrimonioLiquidoPessoa_${pessoa.id}`} 
+                name={`patrimonioLiquidoPessoa_${pessoa.id}`} 
+                className="moeda" 
+                placeholder="R$ 0,00" 
+                onChange={handleMoedaChange}
+                onBlur={(e) => atualizarPessoaRenda(pessoa.id, 'patrimonioLiquido', e.target.value)}
+              />
             </div>
-          )}
+          ))}
         </div>
 
         {/* Seção de imposto de renda */}
@@ -1168,122 +1167,117 @@ export default function FormPage() {
           )}
 
           {/* Perguntas de IR para as outras pessoas com renda */}
-          {pessoasRenda.length > 0 && (
-            <div className="pessoa-info">
-              <h3>Imposto de Renda das outras pessoas com renda</h3>
-              {pessoasRenda.map(pessoa => (
-                <div key={`ir-pessoa-${pessoa.id}`}>
+          {pessoasRenda.map(pessoa => (
+            <div key={`ir-pessoa-${pessoa.id}`}>
+              <div className="option-group">
+                <label id={`label-declara-ir-pessoa-${pessoa.id}`}>
+                  {pessoa.nome || 'Esta pessoa'} declara imposto de renda?
+                </label>
+                <div className="option-options" role="radiogroup" aria-labelledby={`label-declara-ir-pessoa-${pessoa.id}`}>
+                  <div className="option-option">
+                    <input 
+                      type="radio" 
+                      id={`declaraIRPessoaSim_${pessoa.id}`} 
+                      name={`declaraIRPessoa_${pessoa.id}`} 
+                      value="Sim"
+                      onChange={() => atualizarPessoaRenda(pessoa.id, 'declaraIR', 'Sim')}
+                    />
+                    <label htmlFor={`declaraIRPessoaSim_${pessoa.id}`}>Sim</label>
+                  </div>
+                  <div className="option-option">
+                    <input 
+                      type="radio" 
+                      id={`declaraIRPessoaNao_${pessoa.id}`} 
+                      name={`declaraIRPessoa_${pessoa.id}`} 
+                      value="Não"
+                      onChange={() => atualizarPessoaRenda(pessoa.id, 'declaraIR', 'Não')}
+                    />
+                    <label htmlFor={`declaraIRPessoaNao_${pessoa.id}`}>Não</label>
+                  </div>
+                </div>
+              </div>
+              
+              {pessoa.declaraIR === 'Sim' && (
+                <>
                   <div className="option-group">
-                    <label id={`label-declara-ir-pessoa-${pessoa.id}`}>
-                      {pessoa.nome || 'Esta pessoa'} declara imposto de renda?
+                    <label id={`label-tipo-declaracao-pessoa-${pessoa.id}`}>
+                      Qual o tipo da declaração de {pessoa.nome || 'esta pessoa'}?
                     </label>
-                    <div className="option-options" role="radiogroup" aria-labelledby={`label-declara-ir-pessoa-${pessoa.id}`}>
+                    <div className="option-options" role="radiogroup" aria-labelledby={`label-tipo-declaracao-pessoa-${pessoa.id}`}>
                       <div className="option-option">
                         <input 
                           type="radio" 
-                          id={`declaraIRPessoaSim_${pessoa.id}`} 
-                          name={`declaraIRPessoa_${pessoa.id}`} 
-                          value="Sim"
-                          onChange={() => atualizarPessoaRenda(pessoa.id, 'declaraIR', 'Sim')}
+                          id={`tipoCompletaPessoa_${pessoa.id}`} 
+                          name={`tipoDeclaracaoPessoa_${pessoa.id}`} 
+                          value="Completa"
+                          onChange={() => atualizarPessoaRenda(pessoa.id, 'tipoDeclaracao', 'Completa')}
                         />
-                        <label htmlFor={`declaraIRPessoaSim_${pessoa.id}`}>Sim</label>
+                        <label htmlFor={`tipoCompletaPessoa_${pessoa.id}`}>Completa</label>
                       </div>
                       <div className="option-option">
                         <input 
                           type="radio" 
-                          id={`declaraIRPessoaNao_${pessoa.id}`} 
-                          name={`declaraIRPessoa_${pessoa.id}`} 
-                          value="Não"
-                          onChange={() => atualizarPessoaRenda(pessoa.id, 'declaraIR', 'Não')}
+                          id={`tipoSimplificadaPessoa_${pessoa.id}`} 
+                          name={`tipoDeclaracaoPessoa_${pessoa.id}`} 
+                          value="Simplificada"
+                          onChange={() => atualizarPessoaRenda(pessoa.id, 'tipoDeclaracao', 'Simplificada')}
                         />
-                        <label htmlFor={`declaraIRPessoaNao_${pessoa.id}`}>Não</label>
+                        <label htmlFor={`tipoSimplificadaPessoa_${pessoa.id}`}>Simplificada</label>
+                      </div>
+                      <div className="option-option">
+                        <input 
+                          type="radio" 
+                          id={`tipoNaoSeiPessoa_${pessoa.id}`} 
+                          name={`tipoDeclaracaoPessoa_${pessoa.id}`} 
+                          value="Não sei"
+                          onChange={() => atualizarPessoaRenda(pessoa.id, 'tipoDeclaracao', 'Não sei')}
+                        />
+                        <label htmlFor={`tipoNaoSeiPessoa_${pessoa.id}`}>Não sei</label>
                       </div>
                     </div>
                   </div>
-                  
-                  {pessoa.declaraIR === 'Sim' && (
-                    <>
-                      <div className="option-group">
-                        <label id={`label-tipo-declaracao-pessoa-${pessoa.id}`}>
-                          Qual o tipo da declaração de {pessoa.nome || 'esta pessoa'}?
-                        </label>
-                        <div className="option-options" role="radiogroup" aria-labelledby={`label-tipo-declaracao-pessoa-${pessoa.id}`}>
-                          <div className="option-option">
-                            <input 
-                              type="radio" 
-                              id={`tipoCompletaPessoa_${pessoa.id}`} 
-                              name={`tipoDeclaracaoPessoa_${pessoa.id}`} 
-                              value="Completa"
-                              onChange={() => atualizarPessoaRenda(pessoa.id, 'tipoDeclaracao', 'Completa')}
-                            />
-                            <label htmlFor={`tipoCompletaPessoa_${pessoa.id}`}>Completa</label>
-                          </div>
-                          <div className="option-option">
-                            <input 
-                              type="radio" 
-                              id={`tipoSimplificadaPessoa_${pessoa.id}`} 
-                              name={`tipoDeclaracaoPessoa_${pessoa.id}`} 
-                              value="Simplificada"
-                              onChange={() => atualizarPessoaRenda(pessoa.id, 'tipoDeclaracao', 'Simplificada')}
-                            />
-                            <label htmlFor={`tipoSimplificadaPessoa_${pessoa.id}`}>Simplificada</label>
-                          </div>
-                          <div className="option-option">
-                            <input 
-                              type="radio" 
-                              id={`tipoNaoSeiPessoa_${pessoa.id}`} 
-                              name={`tipoDeclaracaoPessoa_${pessoa.id}`} 
-                              value="Não sei"
-                              onChange={() => atualizarPessoaRenda(pessoa.id, 'tipoDeclaracao', 'Não sei')}
-                            />
-                            <label htmlFor={`tipoNaoSeiPessoa_${pessoa.id}`}>Não sei</label>
-                          </div>
-                        </div>
-                      </div>
 
-                      <div className="option-group">
-                        <label id={`label-resultado-ir-pessoa-${pessoa.id}`}>
-                          Resultado do IR de {pessoa.nome || 'esta pessoa'}:
-                        </label>
-                        <div className="option-options" role="radiogroup" aria-labelledby={`label-resultado-ir-pessoa-${pessoa.id}`}>
-                          <div className="option-option">
-                            <input 
-                              type="radio" 
-                              id={`resultadoIRRestituiPessoa_${pessoa.id}`} 
-                              name={`resultadoIRPessoa_${pessoa.id}`} 
-                              value="Restitui"
-                              onChange={() => atualizarPessoaRenda(pessoa.id, 'resultadoIR', 'Restitui')}
-                            />
-                            <label htmlFor={`resultadoIRRestituiPessoa_${pessoa.id}`}>Restitui</label>
-                          </div>
-                          <div className="option-option">
-                            <input 
-                              type="radio" 
-                              id={`resultadoIRPagaPessoa_${pessoa.id}`} 
-                              name={`resultadoIRPessoa_${pessoa.id}`} 
-                              value="Paga"
-                              onChange={() => atualizarPessoaRenda(pessoa.id, 'resultadoIR', 'Paga')}
-                            />
-                            <label htmlFor={`resultadoIRPagaPessoa_${pessoa.id}`}>Paga</label>
-                          </div>
-                          <div className="option-option">
-                            <input 
-                              type="radio" 
-                              id={`resultadoIRIsentoPessoa_${pessoa.id}`} 
-                              name={`resultadoIRPessoa_${pessoa.id}`} 
-                              value="Isento"
-                              onChange={() => atualizarPessoaRenda(pessoa.id, 'resultadoIR', 'Isento')}
-                            />
-                            <label htmlFor={`resultadoIRIsentoPessoa_${pessoa.id}`}>Isento</label>
-                          </div>
-                        </div>
+                  <div className="option-group">
+                    <label id={`label-resultado-ir-pessoa-${pessoa.id}`}>
+                      Resultado do IR de {pessoa.nome || 'esta pessoa'}:
+                    </label>
+                    <div className="option-options" role="radiogroup" aria-labelledby={`label-resultado-ir-pessoa-${pessoa.id}`}>
+                      <div className="option-option">
+                        <input 
+                          type="radio" 
+                          id={`resultadoIRRestituiPessoa_${pessoa.id}`} 
+                          name={`resultadoIRPessoa_${pessoa.id}`} 
+                          value="Restitui"
+                          onChange={() => atualizarPessoaRenda(pessoa.id, 'resultadoIR', 'Restitui')}
+                        />
+                        <label htmlFor={`resultadoIRRestituiPessoa_${pessoa.id}`}>Restitui</label>
                       </div>
-                    </>
-                  )}
-                </div>
-              ))}
+                      <div className="option-option">
+                        <input 
+                          type="radio" 
+                          id={`resultadoIRPagaPessoa_${pessoa.id}`} 
+                          name={`resultadoIRPessoa_${pessoa.id}`} 
+                          value="Paga"
+                          onChange={() => atualizarPessoaRenda(pessoa.id, 'resultadoIR', 'Paga')}
+                        />
+                        <label htmlFor={`resultadoIRPagaPessoa_${pessoa.id}`}>Paga</label>
+                      </div>
+                      <div className="option-option">
+                        <input 
+                          type="radio" 
+                          id={`resultadoIRIsentoPessoa_${pessoa.id}`} 
+                          name={`resultadoIRPessoa_${pessoa.id}`} 
+                          value="Isento"
+                          onChange={() => atualizarPessoaRenda(pessoa.id, 'resultadoIR', 'Isento')}
+                        />
+                        <label htmlFor={`resultadoIRIsentoPessoa_${pessoa.id}`}>Isento</label>
+                      </div>
+                    </div>
+                  </div>
+                </>
+              )}
             </div>
-          )}
+          ))}
         </div>
 
         {/* Seção de fluxo de caixa */}
