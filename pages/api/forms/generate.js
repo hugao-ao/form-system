@@ -1,12 +1,21 @@
-// Arquivo: /pages/api/forms/generate.js
 import dbConnect from '../../../lib/mongoose';
 import Form from '../../../models/Form';
 
 export default async function handler(req, res) {
+  // Definir cabeçalhos CORS para permitir requisições de qualquer origem
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'POST, GET, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  
+  // Lidar com requisições OPTIONS (preflight)
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end();
+  }
+
   // Conectar ao banco de dados
   await dbConnect();
 
-  // Processar requisições GET para obter informações sobre a geração de formulários
+  // Processar requisições GET
   if (req.method === 'GET') {
     try {
       return res.status(200).json({
@@ -22,7 +31,7 @@ export default async function handler(req, res) {
       });
     }
   }
-  // Processar requisições POST para criar novos formulários
+  // Processar requisições POST
   else if (req.method === 'POST') {
     try {
       const { clientName, clientEmail } = req.body;
@@ -67,7 +76,7 @@ export default async function handler(req, res) {
     }
   } else {
     // Método não permitido
-    res.setHeader('Allow', ['GET', 'POST']);
+    res.setHeader('Allow', ['GET', 'POST', 'OPTIONS']);
     return res.status(405).json({ 
       success: false, 
       message: `Método ${req.method} não permitido` 
