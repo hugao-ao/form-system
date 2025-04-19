@@ -26,8 +26,15 @@ export default function Dashboard() {
 
   const fetchFormData = async () => {
     try {
+      setLoading(true);
       // Buscar dados reais do banco de dados
-      const response = await fetch('/api/forms');
+      const response = await fetch('/api/forms', {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+      
       if (response.ok) {
         const data = await response.json();
         
@@ -115,6 +122,9 @@ export default function Dashboard() {
       try {
         const response = await fetch(`/api/forms/${id}`, {
           method: 'DELETE',
+          headers: {
+            'Content-Type': 'application/json',
+          },
         });
         
         if (response.ok) {
