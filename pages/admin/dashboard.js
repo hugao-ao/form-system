@@ -26,34 +26,28 @@ export default function Dashboard() {
 
   const fetchFormData = async () => {
     try {
-      // Simulando dados para evitar erros de conexão com o banco de dados
-      // Quando o banco estiver configurado corretamente, descomente o código abaixo
-      /*
+      // Buscar dados reais do banco de dados
       const response = await fetch('/api/forms');
       if (response.ok) {
         const data = await response.json();
         
-        // Separar formulários pendentes e preenchidos
-        const pendentes = data.filter(form => !form.isUsed);
-        const preenchidos = data.filter(form => form.isUsed);
-        
-        setFormData({ pendentes, preenchidos });
+        if (data.success && data.data) {
+          // Separar formulários pendentes e preenchidos
+          const pendentes = data.data.filter(form => form.status === 'pending');
+          const preenchidos = data.data.filter(form => form.status === 'completed');
+          
+          setFormData({ pendentes, preenchidos });
+        } else {
+          // Se não houver dados ou ocorrer um erro, inicializar com arrays vazios
+          setFormData({ pendentes: [], preenchidos: [] });
+        }
+      } else {
+        console.error('Erro ao buscar formulários:', response.statusText);
+        setFormData({ pendentes: [], preenchidos: [] });
       }
-      */
-      
-      // Dados de demonstração temporários
-      setFormData({
-        pendentes: [
-          { _id: '1', clientName: 'João Silva', clientEmail: 'joao@exemplo.com', createdAt: new Date() },
-          { _id: '2', clientName: 'Maria Oliveira', clientEmail: 'maria@exemplo.com', createdAt: new Date() }
-        ],
-        preenchidos: [
-          { _id: '3', clientName: 'Carlos Santos', clientEmail: 'carlos@exemplo.com', createdAt: new Date() },
-          { _id: '4', clientName: 'Ana Pereira', clientEmail: 'ana@exemplo.com', createdAt: new Date() }
-        ]
-      });
     } catch (error) {
       console.error('Erro ao buscar dados:', error);
+      setFormData({ pendentes: [], preenchidos: [] });
     } finally {
       setLoading(false);
     }
@@ -71,32 +65,41 @@ export default function Dashboard() {
     const clientEmail = prompt('Email do cliente (opcional):');
     
     try {
-      // Simulando geração de link
-      const uniqueId = Math.random().toString(36).substring(2, 15);
-      const fullLink = `${window.location.origin}/form/${uniqueId}`;
+      // Gerar link real através da API
+      const response = await fetch('/api/forms/generate', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          clientName,
+          clientEmail: clientEmail || '',
+        }),
+      });
       
-      // Copiar link para a área de transferência
-      navigator.clipboard.writeText(fullLink)
-        .then(() => {
-          alert(`Link gerado e copiado para a área de transferência!\n\n${fullLink}`);
-        })
-        .catch(() => {
-          alert(`Link gerado com sucesso!\n\n${fullLink}\n\nCopie manualmente o link acima.`);
-        });
-      
-      // Atualizar a lista com o novo link
-      setFormData(prev => ({
-        ...prev,
-        pendentes: [
-          {
-            _id: Date.now().toString(),
-            clientName,
-            clientEmail: clientEmail || '-',
-            createdAt: new Date()
-          },
-          ...prev.pendentes
-        ]
-      }));
+      if (response.ok) {
+        const data = await response.json();
+        
+        if (data.success && data.data) {
+          const fullLink = `${window.location.origin}/form/${data.data.uniqueId}`;
+          
+          // Copiar link para a área de transferência
+          navigator.clipboard.writeText(fullLink)
+            .then(() => {
+              alert(`Link gerado e copiado para a área de transferência!\n\n${fullLink}`);
+            })
+            .catch(() => {
+              alert(`Link gerado com sucesso!\n\n${fullLink}\n\nCopie manualmente o link acima.`);
+            });
+          
+          // Atualizar a lista com o novo formulário
+          fetchFormData();
+        } else {
+          alert('Erro ao gerar link: ' + (data.message || 'Erro desconhecido'));
+        }
+      } else {
+        alert('Erro ao gerar link. Tente novamente.');
+      }
     } catch (error) {
       console.error('Erro:', error);
       alert('Erro ao gerar link. Tente novamente.');
@@ -104,18 +107,27 @@ export default function Dashboard() {
   };
 
   const handleVerDetalhes = (id) => {
-    alert(`Detalhes do formulário ${id} serão exibidos em breve.`);
-    // router.push(`/admin/forms/${id}`);
+    router.push(`/admin/forms/${id}`);
   };
 
-  const handleExcluirFormulario = (id) => {
+  const handleExcluirFormulario = async (id) => {
     if (confirm('Tem certeza que deseja excluir este formulário?')) {
-      setFormData(prev => ({
-        ...prev,
-        pendentes: prev.pendentes.filter(item => item._id !== id),
-        preenchidos: prev.preenchidos.filter(item => item._id !== id)
-      }));
-      alert('Formulário excluído com sucesso!');
+      try {
+        const response = await fetch(`/api/forms/${id}`, {
+          method: 'DELETE',
+        });
+        
+        if (response.ok) {
+          // Atualizar a lista após exclusão
+          fetchFormData();
+          alert('Formulário excluído com sucesso!');
+        } else {
+          alert('Erro ao excluir formulário. Tente novamente.');
+        }
+      } catch (error) {
+        console.error('Erro ao excluir formulário:', error);
+        alert('Erro ao excluir formulário. Tente novamente.');
+      }
     }
   };
 
