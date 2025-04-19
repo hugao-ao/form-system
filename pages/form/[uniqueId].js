@@ -12,11 +12,123 @@ export default function FormPage() {
   const [showDependentes, setShowDependentes] = useState(false);
   const [showDeclaracaoIR, setShowDeclaracaoIR] = useState(false);
   const [fluxoCaixaTipo, setFluxoCaixaTipo] = useState('somado');
+  
+  // Estados para armazenar os itens dinâmicos
+  const [pessoasRenda, setPessoasRenda] = useState([]);
+  const [dependentes, setDependentes] = useState([]);
+  const [patrimonios, setPatrimonios] = useState([]);
+  const [dividas, setDividas] = useState([]);
+
+  // Função para formatar moeda
+  const formatarMoeda = (valor) => {
+    if (!valor) return '';
+    
+    // Remove tudo que não é número
+    valor = valor.replace(/\D/g, '');
+    
+    if (valor === '') return '';
+    
+    // Converte para número e formata
+    valor = (parseFloat(valor) / 100).toFixed(2);
+    return 'R$ ' + valor.replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+  };
+
+  // Handler para campos de moeda
+  const handleMoedaChange = (e) => {
+    const input = e.target;
+    let valor = input.value.replace(/\D/g, '');
+    
+    if (valor === '') {
+      input.value = '';
+      return;
+    }
+    
+    valor = (parseFloat(valor) / 100).toFixed(2);
+    input.value = 'R$ ' + valor.replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+  };
+
+  // Função para adicionar pessoa com renda
+  const adicionarPessoaRenda = () => {
+    const novaPessoa = {
+      id: Date.now(),
+      nome: '',
+      precisaConcordar: ''
+    };
+    setPessoasRenda([...pessoasRenda, novaPessoa]);
+  };
+  
+  // Função para remover pessoa com renda
+  const removerPessoaRenda = (id) => {
+    setPessoasRenda(pessoasRenda.filter(pessoa => pessoa.id !== id));
+  };
+  
+  // Função para adicionar dependente
+  const adicionarDependente = () => {
+    const novoDependente = {
+      id: Date.now(),
+      nome: '',
+      idade: ''
+    };
+    setDependentes([...dependentes, novoDependente]);
+  };
+  
+  // Função para remover dependente
+  const removerDependente = (id) => {
+    setDependentes(dependentes.filter(dependente => dependente.id !== id));
+  };
+  
+  // Função para adicionar patrimônio
+  const adicionarPatrimonio = () => {
+    const novoPatrimonio = {
+      id: Date.now(),
+      descricao: '',
+      valor: ''
+    };
+    setPatrimonios([...patrimonios, novoPatrimonio]);
+  };
+  
+  // Função para remover patrimônio
+  const removerPatrimonio = (id) => {
+    setPatrimonios(patrimonios.filter(patrimonio => patrimonio.id !== id));
+  };
+  
+  // Função para adicionar dívida
+  const adicionarDivida = () => {
+    const novaDivida = {
+      id: Date.now(),
+      descricao: '',
+      valorTotal: '',
+      parcelas: '',
+      valorParcela: ''
+    };
+    setDividas([...dividas, novaDivida]);
+  };
+  
+  // Função para remover dívida
+  const removerDivida = (id) => {
+    setDividas(dividas.filter(divida => divida.id !== id));
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setSubmitted(true);
   };
+
+  // Configurar eventos para campos de moeda após a renderização
+  useEffect(() => {
+    if (!uniqueId) return;
+    
+    const moedaInputs = document.querySelectorAll('.moeda');
+    moedaInputs.forEach(input => {
+      input.addEventListener('input', handleMoedaChange);
+    });
+    
+    return () => {
+      moedaInputs.forEach(input => {
+        input.removeEventListener('input', handleMoedaChange);
+      });
+    };
+  }, [uniqueId]);
 
   if (!uniqueId) {
     return <div>Carregando...</div>;
@@ -448,8 +560,61 @@ export default function FormPage() {
           {showPessoasRenda && (
             <div id="listaPessoasRenda">
               <label>Adicione as outras pessoas que têm renda na sua casa:</label>
-              <div id="pessoasRendaContainer"></div>
-              <button type="button" className="btn btn-adicionar" id="btnAdicionarPessoaRenda">
+              <div id="pessoasRendaContainer">
+                {pessoasRenda.map(pessoa => (
+                  <div key={pessoa.id} className="pessoa-item">
+                    <div className="patrimonio-row">
+                      <label htmlFor={`nomePessoaRenda_${pessoa.id}`}>Nome completo:</label>
+                      <input 
+                        type="text" 
+                        id={`nomePessoaRenda_${pessoa.id}`} 
+                        name={`nomePessoaRenda_${pessoa.id}`} 
+                        placeholder="Nome completo"
+                      />
+                    </div>
+                    
+                    <div className="option-group">
+                      <label id={`label-precisa-concordar-${pessoa.id}`}>
+                        Você precisa que essa pessoa concorde com suas decisões financeiras?
+                      </label>
+                      <div className="option-options" role="radiogroup" aria-labelledby={`label-precisa-concordar-${pessoa.id}`}>
+                        <div className="option-option">
+                          <input 
+                            type="radio" 
+                            id={`precisaConcordarSim_${pessoa.id}`} 
+                            name={`precisaConcordar${pessoa.id}`} 
+                            value="Sim"
+                          />
+                          <label htmlFor={`precisaConcordarSim_${pessoa.id}`}>Sim</label>
+                        </div>
+                        <div className="option-option">
+                          <input 
+                            type="radio" 
+                            id={`precisaConcordarNao_${pessoa.id}`} 
+                            name={`precisaConcordar${pessoa.id}`} 
+                            value="Não"
+                          />
+                          <label htmlFor={`precisaConcordarNao_${pessoa.id}`}>Não</label>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <button 
+                      type="button" 
+                      className="delete-btn" 
+                      onClick={() => removerPessoaRenda(pessoa.id)} 
+                      aria-label="Excluir pessoa"
+                    >
+                      Excluir
+                    </button>
+                  </div>
+                ))}
+              </div>
+              <button 
+                type="button" 
+                className="btn btn-adicionar" 
+                onClick={adicionarPessoaRenda}
+              >
                 <span className="sr-only">Adicionar</span> Adicionar Pessoa
               </button>
             </div>
@@ -488,8 +653,46 @@ export default function FormPage() {
           {showDependentes && (
             <div id="listaDependentes">
               <label>Adicione seus dependentes:</label>
-              <div id="dependentesContainer"></div>
-              <button type="button" className="btn btn-adicionar" id="btnAdicionarDependente">
+              <div id="dependentesContainer">
+                {dependentes.map(dependente => (
+                  <div key={dependente.id} className="dependente-item">
+                    <div className="patrimonio-row">
+                      <label htmlFor={`nomeDependente_${dependente.id}`}>Nome completo:</label>
+                      <input 
+                        type="text" 
+                        id={`nomeDependente_${dependente.id}`} 
+                        name={`nomeDependente_${dependente.id}`} 
+                        placeholder="Nome completo"
+                      />
+                    </div>
+                    
+                    <div className="patrimonio-row">
+                      <label htmlFor={`idadeDependente_${dependente.id}`}>Idade:</label>
+                      <input 
+                        type="number" 
+                        id={`idadeDependente_${dependente.id}`} 
+                        name={`idadeDependente_${dependente.id}`} 
+                        min="0" 
+                        max="120"
+                      />
+                    </div>
+                    
+                    <button 
+                      type="button" 
+                      className="delete-btn" 
+                      onClick={() => removerDependente(dependente.id)} 
+                      aria-label="Excluir dependente"
+                    >
+                      Excluir
+                    </button>
+                  </div>
+                ))}
+              </div>
+              <button 
+                type="button" 
+                className="btn btn-adicionar" 
+                onClick={adicionarDependente}
+              >
                 <span className="sr-only">Adicionar</span> Adicionar Dependente
               </button>
             </div>
@@ -500,8 +703,47 @@ export default function FormPage() {
         <div className="form-section">
           <h2>Patrimônios Físicos</h2>
           <label>Adicione seus patrimônios físicos:</label>
-          <div id="listaPatrimonios"></div>
-          <button type="button" className="btn btn-adicionar" id="btnAdicionarPatrimonio">
+          <div id="listaPatrimonios">
+            {patrimonios.map(patrimonio => (
+              <div key={patrimonio.id} className="patrimonio-item">
+                <div className="patrimonio-row">
+                  <label htmlFor={`descricaoPatrimonio_${patrimonio.id}`}>Descrição do patrimônio:</label>
+                  <input 
+                    type="text" 
+                    id={`descricaoPatrimonio_${patrimonio.id}`} 
+                    name={`descricaoPatrimonio_${patrimonio.id}`} 
+                    placeholder="Ex: Imóvel, Veículo, etc."
+                  />
+                </div>
+                
+                <div className="patrimonio-row">
+                  <label htmlFor={`valorPatrimonio_${patrimonio.id}`}>Valor estimado:</label>
+                  <input 
+                    type="text" 
+                    id={`valorPatrimonio_${patrimonio.id}`} 
+                    name={`valorPatrimonio_${patrimonio.id}`} 
+                    className="moeda" 
+                    placeholder="R$ 0,00"
+                    onChange={handleMoedaChange}
+                  />
+                </div>
+                
+                <button 
+                  type="button" 
+                  className="delete-btn" 
+                  onClick={() => removerPatrimonio(patrimonio.id)} 
+                  aria-label="Excluir patrimônio"
+                >
+                  Excluir
+                </button>
+              </div>
+            ))}
+          </div>
+          <button 
+            type="button" 
+            className="btn btn-adicionar" 
+            onClick={adicionarPatrimonio}
+          >
             <span className="sr-only">Adicionar</span> Adicionar Patrimônio
           </button>
         </div>
@@ -562,7 +804,14 @@ export default function FormPage() {
                 <span className="tooltip-text">Soma de todos os seus bens menos suas dívidas</span>
               </div>
             </label>
-            <input type="text" id="patrimonioLiquido" name="patrimonioLiquido" className="moeda" placeholder="R$ 0,00" />
+            <input 
+              type="text" 
+              id="patrimonioLiquido" 
+              name="patrimonioLiquido" 
+              className="moeda" 
+              placeholder="R$ 0,00" 
+              onChange={handleMoedaChange}
+            />
           </div>
           <div id="patrimoniosPessoas"></div>
         </div>
@@ -647,7 +896,14 @@ export default function FormPage() {
           <div id="fluxoCaixaSomadoContainer" style={{ display: fluxoCaixaTipo === 'somado' ? 'block' : 'none' }}>
             <div className="form-group">
               <label id="labelRenda" htmlFor="renda">Renda mensal:</label>
-              <input type="text" id="renda" name="renda" className="moeda" placeholder="R$ 0,00" />
+              <input 
+                type="text" 
+                id="renda" 
+                name="renda" 
+                className="moeda" 
+                placeholder="R$ 0,00" 
+                onChange={handleMoedaChange}
+              />
             </div>
             <div className="form-group">
               <label id="labelCustosFixos" htmlFor="custosFixos">
@@ -657,7 +913,14 @@ export default function FormPage() {
                   <span className="tooltip-text">Despesas que não variam mensalmente, como aluguel, financiamentos, etc.</span>
                 </div>
               </label>
-              <input type="text" id="custosFixos" name="custosFixos" className="moeda" placeholder="R$ 0,00" />
+              <input 
+                type="text" 
+                id="custosFixos" 
+                name="custosFixos" 
+                className="moeda" 
+                placeholder="R$ 0,00" 
+                onChange={handleMoedaChange}
+              />
             </div>
             <div className="form-group">
               <label id="labelCustosVariaveis" htmlFor="custosVariaveis">
@@ -667,11 +930,25 @@ export default function FormPage() {
                   <span className="tooltip-text">Despesas que podem variar mensalmente, como alimentação, lazer, etc.</span>
                 </div>
               </label>
-              <input type="text" id="custosVariaveis" name="custosVariaveis" className="moeda" placeholder="R$ 0,00" />
+              <input 
+                type="text" 
+                id="custosVariaveis" 
+                name="custosVariaveis" 
+                className="moeda" 
+                placeholder="R$ 0,00" 
+                onChange={handleMoedaChange}
+              />
             </div>
             <div className="form-group">
               <label id="labelPoupanca" htmlFor="poupancaMensal">Quanto você consegue poupar todo mês:</label>
-              <input type="text" id="poupancaMensal" name="poupancaMensal" className="moeda" placeholder="R$ 0,00" />
+              <input 
+                type="text" 
+                id="poupancaMensal" 
+                name="poupancaMensal" 
+                className="moeda" 
+                placeholder="R$ 0,00" 
+                onChange={handleMoedaChange}
+              />
             </div>
           </div>
           
@@ -680,7 +957,14 @@ export default function FormPage() {
               <h3>Seu orçamento</h3>
               <div className="form-group">
                 <label htmlFor="rendaCliente">Sua renda mensal:</label>
-                <input type="text" id="rendaCliente" name="rendaCliente" className="moeda" placeholder="R$ 0,00" />
+                <input 
+                  type="text" 
+                  id="rendaCliente" 
+                  name="rendaCliente" 
+                  className="moeda" 
+                  placeholder="R$ 0,00" 
+                  onChange={handleMoedaChange}
+                />
               </div>
               <div className="form-group">
                 <label htmlFor="custosFixosCliente">
@@ -690,7 +974,14 @@ export default function FormPage() {
                     <span className="tooltip-text">Despesas que não variam mensalmente, como aluguel, financiamentos, etc.</span>
                   </div>
                 </label>
-                <input type="text" id="custosFixosCliente" name="custosFixosCliente" className="moeda" placeholder="R$ 0,00" />
+                <input 
+                  type="text" 
+                  id="custosFixosCliente" 
+                  name="custosFixosCliente" 
+                  className="moeda" 
+                  placeholder="R$ 0,00" 
+                  onChange={handleMoedaChange}
+                />
               </div>
               <div className="form-group">
                 <label htmlFor="custosVariaveisCliente">
@@ -700,11 +991,25 @@ export default function FormPage() {
                     <span className="tooltip-text">Despesas que podem variar mensalmente, como alimentação, lazer, etc.</span>
                   </div>
                 </label>
-                <input type="text" id="custosVariaveisCliente" name="custosVariaveisCliente" className="moeda" placeholder="R$ 0,00" />
+                <input 
+                  type="text" 
+                  id="custosVariaveisCliente" 
+                  name="custosVariaveisCliente" 
+                  className="moeda" 
+                  placeholder="R$ 0,00" 
+                  onChange={handleMoedaChange}
+                />
               </div>
               <div className="form-group">
                 <label htmlFor="poupancaMensalCliente">Quanto você consegue poupar todo mês:</label>
-                <input type="text" id="poupancaMensalCliente" name="poupancaMensalCliente" className="moeda" placeholder="R$ 0,00" />
+                <input 
+                  type="text" 
+                  id="poupancaMensalCliente" 
+                  name="poupancaMensalCliente" 
+                  className="moeda" 
+                  placeholder="R$ 0,00" 
+                  onChange={handleMoedaChange}
+                />
               </div>
             </div>
             
@@ -749,8 +1054,69 @@ export default function FormPage() {
         <div className="form-section" id="secaoDividas">
           <h2>Dívidas</h2>
           <label>Adicione suas dívidas:</label>
-          <div id="listaDividas"></div>
-          <button type="button" className="btn btn-adicionar" id="btnAdicionarDivida">
+          <div id="listaDividas">
+            {dividas.map(divida => (
+              <div key={divida.id} className="divida-item">
+                <div className="patrimonio-row">
+                  <label htmlFor={`descricaoDivida_${divida.id}`}>Descrição da dívida:</label>
+                  <input 
+                    type="text" 
+                    id={`descricaoDivida_${divida.id}`} 
+                    name={`descricaoDivida_${divida.id}`} 
+                    placeholder="Ex: Financiamento, Empréstimo, etc."
+                  />
+                </div>
+                
+                <div className="patrimonio-row">
+                  <label htmlFor={`valorDivida_${divida.id}`}>Valor total:</label>
+                  <input 
+                    type="text" 
+                    id={`valorDivida_${divida.id}`} 
+                    name={`valorDivida_${divida.id}`} 
+                    className="moeda" 
+                    placeholder="R$ 0,00"
+                    onChange={handleMoedaChange}
+                  />
+                </div>
+                
+                <div className="patrimonio-row">
+                  <label htmlFor={`parcelasDivida_${divida.id}`}>Número de parcelas restantes:</label>
+                  <input 
+                    type="number" 
+                    id={`parcelasDivida_${divida.id}`} 
+                    name={`parcelasDivida_${divida.id}`} 
+                    min="0"
+                  />
+                </div>
+                
+                <div className="patrimonio-row">
+                  <label htmlFor={`valorParcelaDivida_${divida.id}`}>Valor da parcela:</label>
+                  <input 
+                    type="text" 
+                    id={`valorParcelaDivida_${divida.id}`} 
+                    name={`valorParcelaDivida_${divida.id}`} 
+                    className="moeda" 
+                    placeholder="R$ 0,00"
+                    onChange={handleMoedaChange}
+                  />
+                </div>
+                
+                <button 
+                  type="button" 
+                  className="delete-btn" 
+                  onClick={() => removerDivida(divida.id)} 
+                  aria-label="Excluir dívida"
+                >
+                  Excluir
+                </button>
+              </div>
+            ))}
+          </div>
+          <button 
+            type="button" 
+            className="btn btn-adicionar" 
+            onClick={adicionarDivida}
+          >
             <span className="sr-only">Adicionar</span> Adicionar Dívida
           </button>
         </div>
