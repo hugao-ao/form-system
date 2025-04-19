@@ -1,48 +1,66 @@
-import { connectToDatabase } from '../../../lib/mongoose';
+import dbConnect from '../../../lib/mongoose';
 import Form from '../../../models/Form';
-import { getSession } from 'next-auth/react';
-import { v4 as uuidv4 } from 'uuid';
 
 export default async function handler(req, res) {
-  const session = await getSession({ req });
-  
-  if (!session) {
-    return res.status(401).json({ error: 'Não autorizado' });
-  }
-  
-  if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Método não permitido' });
-  }
-  
-  const { clientName, clientEmail } = req.body;
-  
-  if (!clientName) {
-    return res.status(400).json({ error: 'Nome do cliente é obrigatório' });
-  }
-  
-  try {
-    await connectToDatabase();
-    
-    // Gerar ID único
-    const uniqueId = uuidv4();
-    
-    // Criar novo formulário
-    const newForm = new Form({
-      uniqueId,
-      clientName,
-      clientEmail,
-      isUsed: false,
-      createdBy: session.user.id
+  // Conectar ao banco de dados
+  await dbConnect();
+
+  // Processar apenas requisições POST
+  if (req.method === 'POST') {
+    try {
+      const { clientName, clientEmail } = req.body;
+      
+      // Validar dados de entrada
+      if (!clientName) {
+        return res.status(400).json({ 
+          success: false, 
+          message: 'Nome do cliente é obrigatório' 
+        });
+      }
+      
+      // Gerar ID único
+      const uniqueId = generateUniqueId();
+      
+      // Criar novo formulário
+      const form = await Form.create({
+        uniqueId,
+        clientName,
+        clientEmail: clientEmail || '',
+        createdAt: new Date(),
+        status: 'pending',
+        used: false,
+        createdBy: req.body.userId || '000000000000000000000000' // ID padrão se não houver usuário autenticado
+      });
+      
+      return res.status(201).json({
+        success: true,
+        data: {
+          _id: form._id,
+          uniqueId: form.uniqueId,
+          clientName: form.clientName,
+          clientEmail: form.clientEmail
+        }
+      });
+    } catch (error) {
+      console.error('Erro ao gerar link de formulário:', error);
+      return res.status(500).json({ 
+        success: false, 
+        message: 'Erro ao gerar link de formulário' 
+      });
+    }
+  } else {
+    // Método não permitido
+    res.setHeader('Allow', ['POST']);
+    return res.status(405).json({ 
+      success: false, 
+      message: `Método ${req.method} não permitido` 
     });
-    
-    await newForm.save();
-    
-    return res.status(201).json({ 
-      message: 'Link gerado com sucesso',
-      uniqueId
-    });
-  } catch (error) {
-    console.error('Erro ao gerar link:', error);
-    return res.status(500).json({ error: 'Erro interno do servidor' });
   }
+}
+
+// Função para gerar ID único
+function generateUniqueId() {
+  const timestamp = Date.now().toString(36);
+  const randomStr = Math.random().toString(36).substring(2, 10);
+  return `${timestamp}-${randomStr}`;
 }
