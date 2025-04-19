@@ -29,7 +29,7 @@ export default async function handler(req, res) {
         createdAt: new Date(),
         status: 'pending',
         used: false,
-        createdBy: req.body.userId || '000000000000000000000000' // ID padrão se não houver usuário autenticado
+        createdBy: '000000000000000000000000' // ID padrão se não houver usuário autenticado
       });
       
       return res.status(201).json({
