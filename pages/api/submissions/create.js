@@ -41,6 +41,13 @@ export default async function handler(req, res) {
         suggestedDocuments
       });
 
+      // Atualizar o status do formulário para completed e marcar como usado
+      await Form.findByIdAndUpdate(
+        formId,
+        { status: 'completed', used: true },
+        { new: true }
+      );
+
       // Retornar sucesso
       return res.status(201).json({
         success: true,
