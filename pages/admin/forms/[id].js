@@ -195,11 +195,9 @@ export default function FormDetails() {
   };
 
  const handleGerarPDF = async () => {
-  if (!form) return;
-  
-  // Abrir o relatório em uma nova janela para impressão
-  window.open(`/api/pdf/generate/${id}`, '_blank');
+  alert('Funcionalidade de relatório em desenvolvimento. Por favor, tente novamente mais tarde.');
 };
+
 
       
       if (response.ok) {
