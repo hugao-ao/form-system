@@ -37,7 +37,7 @@ export default async function handler(req, res) {
           submittedAt: new Date()
         });
         
-        console.log('Submissão criada:', submission);
+        console.log('Submissão criada:', submission._id);
         
         // Atualizar o status do formulário para "completed" e marcar como usado
         const updatedForm = await Form.findByIdAndUpdate(
@@ -49,7 +49,7 @@ export default async function handler(req, res) {
           { new: true } // Retorna o documento atualizado
         );
         
-        console.log('Formulário atualizado:', updatedForm);
+        console.log('Formulário atualizado:', updatedForm ? updatedForm._id : 'não encontrado');
         
         if (!updatedForm) {
           console.error('Formulário não encontrado para atualização:', formId);
