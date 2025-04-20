@@ -2,11 +2,37 @@ import dbConnect from '../../../lib/mongoose';
 import Form from '../../../models/Form';
 
 export default async function handler(req, res) {
+  // Definir cabeçalhos CORS para permitir requisições de qualquer origem
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'POST, GET, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  
+  // Lidar com requisições OPTIONS (preflight)
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end();
+  }
+
   // Conectar ao banco de dados
   await dbConnect();
 
-  // Processar apenas requisições POST
-  if (req.method === 'POST') {
+  // Processar requisições GET
+  if (req.method === 'GET') {
+    try {
+      return res.status(200).json({
+        success: true,
+        message: 'Endpoint de geração de formulários disponível',
+        instructions: 'Use o método POST para gerar um novo formulário'
+      });
+    } catch (error) {
+      console.error('Erro ao acessar endpoint de geração:', error);
+      return res.status(500).json({ 
+        success: false, 
+        message: 'Erro ao acessar endpoint de geração' 
+      });
+    }
+  }
+  // Processar requisições POST
+  else if (req.method === 'POST') {
     try {
       const { clientName, clientEmail } = req.body;
       
@@ -50,7 +76,7 @@ export default async function handler(req, res) {
     }
   } else {
     // Método não permitido
-    res.setHeader('Allow', ['POST']);
+    res.setHeader('Allow', ['GET', 'POST', 'OPTIONS']);
     return res.status(405).json({ 
       success: false, 
       message: `Método ${req.method} não permitido` 
