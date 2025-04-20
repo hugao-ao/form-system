@@ -194,28 +194,9 @@ export default function FormDetails() {
     }
   };
 
-const handleGerarPDF = async () => {
-  alert('Funcionalidade de relatório em desenvolvimento. Por favor, tente novamente mais tarde.');
-};
-
-
-      
-      if (response.ok) {
-        const blob = await response.blob();
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `formulario-${form.clientName.replace(/\s+/g, '-').toLowerCase()}.pdf`;
-        document.body.appendChild(a);
-        a.click();
-        window.URL.revokeObjectURL(url);
-      } else {
-        alert('Erro ao gerar PDF. Tente novamente.');
-      }
-    } catch (error) {
-      console.error('Erro ao gerar PDF:', error);
-      alert('Erro ao gerar PDF. Tente novamente.');
-    }
+  // Função simplificada que apenas mostra um alerta
+  const handleGerarPDF = async () => {
+    alert('Funcionalidade de relatório em desenvolvimento. Por favor, tente novamente mais tarde.');
   };
 
   const handleCopiarTexto = (texto) => {
@@ -551,7 +532,7 @@ const handleGerarPDF = async () => {
               marginRight: '10px'
             }}
           >
-            Gerar PDF
+            Gerar Relatório
           </button>
           
           <button 
