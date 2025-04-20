@@ -1,4 +1,4 @@
-import { jsPDF } from 'jspdf';
+import jsPDF from 'jspdf';
 import dbConnect from '../../../../lib/mongoose';
 import Form from '../../../../models/Form';
 import Submission from '../../../../models/Submission';
