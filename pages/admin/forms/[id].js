@@ -194,7 +194,7 @@ export default function FormDetails() {
     }
   };
 
- const handleGerarPDF = async () => {
+const handleGerarPDF = async () => {
   alert('Funcionalidade de relatório em desenvolvimento. Por favor, tente novamente mais tarde.');
 };
 
