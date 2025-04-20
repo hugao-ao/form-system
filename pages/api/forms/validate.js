@@ -2,54 +2,68 @@ import dbConnect from '../../../lib/mongoose';
 import Form from '../../../models/Form';
 
 export default async function handler(req, res) {
+  // Definir cabeçalhos CORS para permitir requisições de qualquer origem
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  
+  // Lidar com requisições OPTIONS (preflight)
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end();
+  }
+
   // Conectar ao banco de dados
-  await dbConnect();
+  try {
+    await dbConnect();
 
-  // Processar apenas requisições GET
-  if (req.method === 'GET') {
-    try {
-      const { uniqueId } = req.query;
-
-      // Validar dados de entrada
-      if (!uniqueId) {
-        return res.status(400).json({ success: false, message: 'ID único é obrigatório' });
-      }
-
-      // Buscar formulário pelo ID único
-      const form = await Form.findOne({ uniqueId });
-
-      // Verificar se o formulário existe
-      if (!form) {
-        return res.status(404).json({ success: false, message: 'Formulário não encontrado' });
-      }
-
-      // Verificar se o formulário já foi usado
-      if (form.used) {
-        return res.status(403).json({ success: false, message: 'Este link já foi utilizado e não pode ser acessado novamente' });
-      }
-
-      // Verificar se o formulário expirou
-      if (form.expiresAt && new Date(form.expiresAt) < new Date()) {
-        await Form.findByIdAndUpdate(form._id, { status: 'expired' });
-        return res.status(403).json({ success: false, message: 'Este link expirou e não pode mais ser utilizado' });
-      }
-
-      // Retornar informações básicas do formulário (sem marcar como usado ainda)
-      return res.status(200).json({
-        success: true,
-        data: {
-          formId: form._id,
-          clientName: form.clientName,
-          valid: true
+    // Processar requisições GET para validar um formulário
+    if (req.method === 'GET') {
+      try {
+        const { uniqueId } = req.query;
+        
+        // Verificar se o ID único foi fornecido
+        if (!uniqueId) {
+          return res.status(400).json({
+            success: false,
+            message: 'ID único do formulário é obrigatório'
+          });
         }
+        
+        // Buscar o formulário pelo ID único
+        const form = await Form.findOne({ uniqueId });
+        
+        // Verificar se o formulário existe
+        if (!form) {
+          return res.status(404).json({
+            success: false,
+            message: 'Formulário não encontrado'
+          });
+        }
+        
+        return res.status(200).json({
+          success: true,
+          data: form
+        });
+      } catch (error) {
+        console.error('Erro ao validar formulário:', error);
+        return res.status(500).json({
+          success: false,
+          message: 'Erro ao validar formulário'
+        });
+      }
+    } else {
+      // Método não permitido
+      res.setHeader('Allow', ['GET', 'OPTIONS']);
+      return res.status(405).json({
+        success: false,
+        message: `Método ${req.method} não permitido`
       });
-    } catch (error) {
-      console.error('Erro ao validar link:', error);
-      return res.status(500).json({ success: false, message: 'Erro ao validar link único' });
     }
-  } else {
-    // Método não permitido
-    res.setHeader('Allow', ['GET']);
-    return res.status(405).json({ success: false, message: `Método ${req.method} não permitido` });
+  } catch (error) {
+    console.error('Erro de conexão com o banco de dados:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Erro de conexão com o banco de dados'
+    });
   }
 }
