@@ -66,52 +66,54 @@ export default function Dashboard() {
   };
 
   const handleGerarLink = async () => {
-    const clientName = prompt('Nome do cliente:');
-    if (!clientName) return;
+  const clientName = prompt('Nome do cliente:');
+  if (!clientName) return;
+  
+  const clientEmail = prompt('Email do cliente (opcional):');
+  
+  try {
+    // Gerar link real através da API
+    const response = await fetch('/api/forms/generate', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      },
+      body: JSON.stringify({
+        clientName,
+        clientEmail: clientEmail || '',
+      }),
+    });
     
-    const clientEmail = prompt('Email do cliente (opcional):');
-    
-    try {
-      // Gerar link real através da API
-      const response = await fetch('/api/forms/generate', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          clientName,
-          clientEmail: clientEmail || '',
-        }),
-      });
+    if (response.ok) {
+      const data = await response.json();
       
-      if (response.ok) {
-        const data = await response.json();
+      if (data.success && data.data) {
+        const fullLink = `${window.location.origin}/form/${data.data.uniqueId}`;
         
-        if (data.success && data.data) {
-          const fullLink = `${window.location.origin}/form/${data.data.uniqueId}`;
-          
-          // Copiar link para a área de transferência
-          navigator.clipboard.writeText(fullLink)
-            .then(() => {
-              alert(`Link gerado e copiado para a área de transferência!\n\n${fullLink}`);
-            })
-            .catch(() => {
-              alert(`Link gerado com sucesso!\n\n${fullLink}\n\nCopie manualmente o link acima.`);
-            });
-          
-          // Atualizar a lista com o novo formulário
-          fetchFormData();
-        } else {
-          alert('Erro ao gerar link: ' + (data.message || 'Erro desconhecido'));
-        }
+        // Copiar link para a área de transferência
+        navigator.clipboard.writeText(fullLink)
+          .then(() => {
+            alert(`Link gerado e copiado para a área de transferência!\n\n${fullLink}`);
+          })
+          .catch(() => {
+            alert(`Link gerado com sucesso!\n\n${fullLink}\n\nCopie manualmente o link acima.`);
+          });
+        
+        // Atualizar a lista com o novo formulário
+        fetchFormData();
       } else {
-        alert('Erro ao gerar link. Tente novamente.');
+        alert('Erro ao gerar link: ' + (data.message || 'Erro desconhecido'));
       }
-    } catch (error) {
-      console.error('Erro:', error);
-      alert('Erro ao gerar link. Tente novamente.');
+    } else {
+      alert('Erro ao gerar link. Tente novamente. Status: ' + response.status);
+      console.error('Erro na resposta:', await response.text());
     }
-  };
+  } catch (error) {
+    console.error('Erro:', error);
+    alert('Erro ao gerar link. Tente novamente.');
+  }
+};
 
   const handleVerDetalhes = (id) => {
     router.push(`/admin/forms/${id}`);
