@@ -1,272 +1,172 @@
-import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
+import { jsPDF } from 'jspdf';
 import dbConnect from '../../../../lib/mongoose';
-import Submission from '../../../../models/Submission';
 import Form from '../../../../models/Form';
-import Note from '../../../../models/Note';
-import { getSession } from 'next-auth/react';
+import Submission from '../../../../models/Submission';
 
 export default async function handler(req, res) {
-  const session = await getSession({ req });
-
-  // Verificar se o usuário está autenticado
-  if (!session) {
-    return res.status(401).json({ success: false, message: 'Não autorizado' });
-  }
-
+  const { id } = req.query;
+  
   // Conectar ao banco de dados
   await dbConnect();
 
-  const { id } = req.query;
-
-  // Verificar se o ID foi fornecido
-  if (!id) {
-    return res.status(400).json({ success: false, message: 'ID da submissão é obrigatório' });
-  }
-
-  // Processar apenas requisições GET
+  // Processar requisições GET para gerar PDF
   if (req.method === 'GET') {
     try {
-      // Buscar submissão
-      const submission = await Submission.findById(id).lean();
-      
-      if (!submission) {
-        return res.status(404).json({ success: false, message: 'Submissão não encontrada' });
+      // Verificar se o ID foi fornecido
+      if (!id) {
+        return res.status(400).json({
+          success: false,
+          message: 'ID do formulário é obrigatório'
+        });
       }
       
-      // Buscar formulário relacionado
-      const form = await Form.findById(submission.formId).lean();
+      // Buscar o formulário pelo ID
+      const form = await Form.findById(id);
       
+      // Verificar se o formulário existe
       if (!form) {
-        return res.status(404).json({ success: false, message: 'Formulário não encontrado' });
+        return res.status(404).json({
+          success: false,
+          message: 'Formulário não encontrado'
+        });
       }
       
-      // Buscar notas relacionadas
-      const notes = await Note.find({ submissionId: id })
-        .sort({ createdAt: -1 })
-        .lean();
+      // Buscar a submissão pelo ID do formulário
+      const submission = await Submission.findOne({ formId: id });
       
-      // Criar PDF
-      const pdfDoc = await PDFDocument.create();
-      const timesRomanFont = await pdfDoc.embedFont(StandardFonts.TimesRoman);
-      const timesRomanBoldFont = await pdfDoc.embedFont(StandardFonts.TimesRomanBold);
-      
-      // Adicionar página
-      const page = pdfDoc.addPage([595.28, 841.89]); // A4
-      const { width, height } = page.getSize();
-      
-      // Definir margens
-      const margin = 50;
-      let y = height - margin;
-      const lineHeight = 20;
+      // Criar o PDF
+      const doc = new jsPDF();
       
       // Adicionar título
-      page.drawText('Formulário de Atendimento Financeiro', {
-        x: margin,
-        y,
-        size: 18,
-        font: timesRomanBoldFont,
-        color: rgb(0, 0, 0),
-      });
-      
-      y -= lineHeight * 2;
+      doc.setFontSize(20);
+      doc.text('Relatório de Atendimento Financeiro', 105, 20, { align: 'center' });
       
       // Adicionar informações do cliente
-      page.drawText(`Cliente: ${form.clientName}`, {
-        x: margin,
-        y,
-        size: 12,
-        font: timesRomanBoldFont,
-        color: rgb(0, 0, 0),
-      });
+      doc.setFontSize(14);
+      doc.text('Informações do Cliente', 20, 40);
       
-      y -= lineHeight;
+      doc.setFontSize(12);
+      doc.text(`Nome: ${form.clientName}`, 20, 50);
+      doc.text(`Email: ${form.clientEmail || 'Não informado'}`, 20, 60);
+      doc.text(`Data de Criação: ${new Date(form.createdAt).toLocaleDateString('pt-BR')}`, 20, 70);
+      doc.text(`Status: ${form.status === 'pending' ? 'Pendente' : 'Preenchido'}`, 20, 80);
       
-      page.drawText(`Data de preenchimento: ${new Date(submission.submittedAt).toLocaleDateString('pt-BR')}`, {
-        x: margin,
-        y,
-        size: 12,
-        font: timesRomanFont,
-        color: rgb(0, 0, 0),
-      });
-      
-      y -= lineHeight * 2;
-      
-      // Adicionar resumo
-      page.drawText('Resumo:', {
-        x: margin,
-        y,
-        size: 14,
-        font: timesRomanBoldFont,
-        color: rgb(0, 0, 0),
-      });
-      
-      y -= lineHeight;
-      
-      // Quebrar o resumo em linhas
-      const summaryLines = breakTextIntoLines(submission.summary, 70);
-      for (const line of summaryLines) {
-        page.drawText(line, {
-          x: margin,
-          y,
-          size: 12,
-          font: timesRomanFont,
-          color: rgb(0, 0, 0),
-        });
-        y -= lineHeight;
-      }
-      
-      y -= lineHeight;
-      
-      // Adicionar documentos sugeridos
-      page.drawText('Documentos Sugeridos:', {
-        x: margin,
-        y,
-        size: 14,
-        font: timesRomanBoldFont,
-        color: rgb(0, 0, 0),
-      });
-      
-      y -= lineHeight;
-      
-      for (const doc of submission.suggestedDocuments) {
-        page.drawText(`• ${doc}`, {
-          x: margin + 10,
-          y,
-          size: 12,
-          font: timesRomanFont,
-          color: rgb(0, 0, 0),
-        });
-        y -= lineHeight;
-      }
-      
-      y -= lineHeight;
-      
-      // Adicionar observações
-      if (notes.length > 0) {
-        page.drawText('Observações:', {
-          x: margin,
-          y,
-          size: 14,
-          font: timesRomanBoldFont,
-          color: rgb(0, 0, 0),
-        });
+      // Se houver submissão, adicionar resumo e documentos sugeridos
+      if (submission) {
+        // Adicionar resumo
+        doc.setFontSize(14);
+        doc.text('Resumo do Atendimento', 20, 100);
         
-        y -= lineHeight;
+        doc.setFontSize(12);
+        const formData = submission.formData;
         
-        for (const note of notes) {
-          const noteLines = breakTextIntoLines(note.content, 70);
-          for (const line of noteLines) {
-            page.drawText(line, {
-              x: margin + 10,
-              y,
-              size: 12,
-              font: timesRomanFont,
-              color: rgb(0, 0, 0),
-            });
-            y -= lineHeight;
-          }
-          
-          page.drawText(`(Adicionada em ${new Date(note.createdAt).toLocaleDateString('pt-BR')})`, {
-            x: margin + 10,
-            y,
-            size: 10,
-            font: timesRomanFont,
-            color: rgb(0.5, 0.5, 0.5),
-          });
-          
-          y -= lineHeight * 1.5;
+        let resumo = '';
+        
+        if (formData.dadosPessoais) {
+          resumo += `Cliente ${formData.dadosPessoais.nome}, ${formData.dadosPessoais.profissao}, `;
+          resumo += `com renda mensal de ${formData.dadosPessoais.rendaMensal}.\n\n`;
         }
-      }
-      
-      // Adicionar dados do formulário
-      if (y < 200) {
-        // Se não houver espaço suficiente, adicionar nova página
-        const newPage = pdfDoc.addPage([595.28, 841.89]);
-        y = height - margin;
-      }
-      
-      page.drawText('Dados do Formulário:', {
-        x: margin,
-        y,
-        size: 14,
-        font: timesRomanBoldFont,
-        color: rgb(0, 0, 0),
-      });
-      
-      y -= lineHeight;
-      
-      // Adicionar dados do formulário
-      for (const [key, value] of Object.entries(submission.data)) {
-        if (value) {
-          const formattedKey = formatKey(key);
-          const formattedValue = typeof value === 'object' ? JSON.stringify(value) : value.toString();
-          
-          page.drawText(`${formattedKey}: ${formattedValue}`, {
-            x: margin + 10,
-            y,
-            size: 12,
-            font: timesRomanFont,
-            color: rgb(0, 0, 0),
-          });
-          
-          y -= lineHeight;
-          
-          // Se não houver espaço suficiente, adicionar nova página
-          if (y < margin) {
-            const newPage = pdfDoc.addPage([595.28, 841.89]);
-            y = height - margin;
-          }
+        
+        if (formData.pessoasRenda && formData.pessoasRenda.length > 0) {
+          resumo += `Família com ${formData.pessoasRenda.length} pessoa(s) adicional(is) com renda.\n`;
         }
+        
+        if (formData.dependentes && formData.dependentes.length > 0) {
+          resumo += `Possui ${formData.dependentes.length} dependente(s).\n\n`;
+        }
+        
+        if (formData.patrimonios && formData.patrimonios.length > 0) {
+          resumo += `Patrimônios principais:\n`;
+          formData.patrimonios.forEach(patrimonio => {
+            resumo += `- ${patrimonio.descricao}: ${patrimonio.valor}\n`;
+          });
+          resumo += '\n';
+        }
+        
+        if (formData.dividas && formData.dividas.length > 0) {
+          resumo += `Dívidas principais:\n`;
+          formData.dividas.forEach(divida => {
+            resumo += `- ${divida.descricao}: ${divida.valorTotal}\n`;
+          });
+          resumo += '\n';
+        }
+        
+        if (formData.objetivos) {
+          resumo += `Objetivos financeiros:\n`;
+          resumo += `- Curto prazo: ${formData.objetivos.curto || 'Não informado'}\n`;
+          resumo += `- Médio prazo: ${formData.objetivos.medio || 'Não informado'}\n`;
+          resumo += `- Longo prazo: ${formData.objetivos.longo || 'Não informado'}\n\n`;
+        }
+        
+        if (formData.observacoes) {
+          resumo += `Observações adicionais: ${formData.observacoes}\n`;
+        }
+        
+        // Quebrar o texto em linhas para caber na página
+        const splitResumo = doc.splitTextToSize(resumo, 170);
+        doc.text(splitResumo, 20, 110);
+        
+        // Calcular a posição Y para os documentos sugeridos
+        let yPos = 110 + (splitResumo.length * 7);
+        
+        // Adicionar documentos sugeridos
+        doc.setFontSize(14);
+        doc.text('Documentos Sugeridos para a Reunião', 20, yPos);
+        
+        doc.setFontSize(12);
+        yPos += 10;
+        
+        // Lista básica de documentos
+        const documentos = [
+          "Documento de identidade (RG e CPF)",
+          "Comprovante de residência atualizado",
+          "Comprovantes de renda dos últimos 3 meses",
+          "Extratos bancários dos últimos 3 meses",
+          "Declaração de Imposto de Renda mais recente"
+        ];
+        
+        // Adicionar documentos adicionais baseados nas informações do formulário
+        if (formData.patrimonios && formData.patrimonios.length > 0) {
+          documentos.push("Documentos dos bens (escrituras, CRLVs, etc.)");
+        }
+        
+        if (formData.dividas && formData.dividas.length > 0) {
+          documentos.push("Contratos de financiamentos e empréstimos");
+          documentos.push("Faturas de cartões de crédito dos últimos 3 meses");
+        }
+        
+        documentos.forEach((doc, index) => {
+          doc.text(`${index + 1}. ${doc}`, 20, yPos + (index * 7));
+        });
       }
       
-      // Serializar o PDF
-      const pdfBytes = await pdfDoc.save();
+      // Adicionar rodapé
+      const pageCount = doc.internal.getNumberOfPages();
+      for (let i = 1; i <= pageCount; i++) {
+        doc.setPage(i);
+        doc.setFontSize(10);
+        doc.text(`Página ${i} de ${pageCount}`, 105, 290, { align: 'center' });
+        doc.text('Sistema de Formulários Personalizados - Versão 1.0', 105, 295, { align: 'center' });
+      }
       
-      // Definir cabeçalhos para download
+      // Enviar o PDF como resposta
+      const pdfBuffer = doc.output('arraybuffer');
       res.setHeader('Content-Type', 'application/pdf');
-      res.setHeader('Content-Disposition', `attachment; filename=formulario_${form.clientName.replace(/\s+/g, '_')}.pdf`);
-      
-      // Enviar o PDF
-      res.send(Buffer.from(pdfBytes));
+      res.setHeader('Content-Disposition', `attachment; filename=formulario-${form.clientName.replace(/\s+/g, '-').toLowerCase()}.pdf`);
+      res.send(Buffer.from(pdfBuffer));
     } catch (error) {
       console.error('Erro ao gerar PDF:', error);
-      return res.status(500).json({ success: false, message: 'Erro ao gerar PDF' });
+      return res.status(500).json({
+        success: false,
+        message: 'Erro ao gerar PDF'
+      });
     }
   } else {
     // Método não permitido
     res.setHeader('Allow', ['GET']);
-    return res.status(405).json({ success: false, message: `Método ${req.method} não permitido` });
+    return res.status(405).json({
+      success: false,
+      message: `Método ${req.method} não permitido`
+    });
   }
-}
-
-// Função para quebrar texto em linhas
-function breakTextIntoLines(text, maxCharsPerLine) {
-  if (!text) return [];
-  
-  const words = text.split(' ');
-  const lines = [];
-  let currentLine = '';
-  
-  for (const word of words) {
-    if (currentLine.length + word.length + 1 <= maxCharsPerLine) {
-      currentLine += (currentLine.length > 0 ? ' ' : '') + word;
-    } else {
-      lines.push(currentLine);
-      currentLine = word;
-    }
-  }
-  
-  if (currentLine.length > 0) {
-    lines.push(currentLine);
-  }
-  
-  return lines;
-}
-
-// Função para formatar chaves do formulário
-function formatKey(key) {
-  return key
-    .replace(/([A-Z])/g, ' $1')
-    .replace(/^./, str => str.toUpperCase())
-    .replace(/([a-z])([A-Z])/g, '$1 $2');
 }
