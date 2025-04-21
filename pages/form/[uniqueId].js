@@ -6,6 +6,11 @@ export default function FormPage() {
   const router = useRouter();
   const { uniqueId } = router.query;
   const [submitted, setSubmitted] = useState(false);
+  const [formData, setFormData] = useState({});
+  const [formInfo, setFormInfo] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [formAlreadySubmitted, setFormAlreadySubmitted] = useState(false);
   
   // Estados para controlar a visibilidade das seções
   const [showPessoasRenda, setShowPessoasRenda] = useState(false);
@@ -22,6 +27,47 @@ export default function FormPage() {
   
   // Estado para controlar se há mais de uma pessoa com renda
   const [multiplasRendas, setMultiplasRendas] = useState(false);
+
+  // Verificar se o formulário existe e se já foi preenchido
+  useEffect(() => {
+    if (!uniqueId) return;
+    
+    async function checkFormStatus() {
+      try {
+        setLoading(true);
+        const response = await fetch(`/api/forms/validate?uniqueId=${uniqueId}`);
+        
+        if (!response.ok) {
+          if (response.status === 404) {
+            setError('Formulário não encontrado');
+          } else {
+            throw new Error(`Erro ao verificar formulário: ${response.status}`);
+          }
+          return;
+        }
+        
+        const data = await response.json();
+        
+        if (data.success) {
+          setFormInfo(data.data);
+          
+          // Verificar se o formulário já foi preenchido
+          if (data.data.status === 'completed' || data.data.used) {
+            setFormAlreadySubmitted(true);
+          }
+        } else {
+          setError(data.message || 'Erro ao verificar formulário');
+        }
+      } catch (error) {
+        console.error('Erro:', error);
+        setError('Erro ao verificar formulário. Tente novamente mais tarde.');
+      } finally {
+        setLoading(false);
+      }
+    }
+    
+    checkFormStatus();
+  }, [uniqueId]);
 
   // Função para formatar moeda
   const formatarMoeda = (valor) => {
@@ -154,7 +200,59 @@ export default function FormPage() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setSubmitted(true);
+    
+    // Coletar todos os dados do formulário
+    const formElements = e.target.elements;
+    const formData = {
+      dadosPessoais: {
+        nome: formElements.nome.value,
+        email: formElements.email.value,
+        telefone: formElements.telefone.value,
+        estadoCivil: formElements.estadoCivil.value,
+        profissao: formElements.profissao.value,
+        rendaMensal: formElements.rendaMensal.value
+      },
+      pessoasRenda: pessoasRenda,
+      dependentes: dependentes,
+      patrimonios: patrimonios,
+      dividas: dividas,
+      objetivos: {
+        curto: formElements.objetivoCurto.value,
+        medio: formElements.objetivoMedio.value,
+        longo: formElements.objetivoLongo.value
+      },
+      observacoes: formElements.observacoes.value
+    };
+    
+    setFormData(formData);
+    
+    try {
+      // Enviar dados para a API
+      const response = await fetch('/api/submissions/create', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          formId: formInfo._id,
+          formData: formData
+        }),
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success) {
+          setSubmitted(true);
+        } else {
+          alert('Erro ao enviar formulário: ' + (data.message || 'Erro desconhecido'));
+        }
+      } else {
+        alert('Erro ao enviar formulário. Tente novamente.');
+      }
+    } catch (error) {
+      console.error('Erro:', error);
+      alert('Erro ao enviar formulário. Tente novamente.');
+    }
   };
 
   // Configurar eventos para campos de moeda após a renderização
@@ -178,8 +276,57 @@ export default function FormPage() {
     setMultiplasRendas(pessoasRenda.length > 0);
   }, [pessoasRenda]);
 
-  if (!uniqueId) {
-    return <div>Carregando...</div>;
+  if (loading) {
+    return (
+      <div style={{ 
+        backgroundColor: '#002d26', 
+        minHeight: '100vh', 
+        display: 'flex', 
+        alignItems: 'center', 
+        justifyContent: 'center',
+        color: 'white',
+        padding: '20px'
+      }}>
+        <p>Carregando...</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div style={{ 
+        backgroundColor: '#002d26', 
+        minHeight: '100vh', 
+        display: 'flex', 
+        alignItems: 'center', 
+        justifyContent: 'center',
+        color: 'white',
+        padding: '20px',
+        flexDirection: 'column'
+      }}>
+        <h1 style={{ color: '#ffd700', marginBottom: '20px' }}>Erro</h1>
+        <p style={{ marginBottom: '20px' }}>{error}</p>
+      </div>
+    );
+  }
+
+  if (formAlreadySubmitted) {
+    return (
+      <div style={{ 
+        backgroundColor: '#002d26', 
+        minHeight: '100vh', 
+        display: 'flex', 
+        alignItems: 'center', 
+        justifyContent: 'center',
+        color: 'white',
+        padding: '20px',
+        flexDirection: 'column'
+      }}>
+        <h1 style={{ color: '#ffd700', marginBottom: '20px' }}>Formulário já preenchido</h1>
+        <p style={{ marginBottom: '20px' }}>Este formulário já foi preenchido anteriormente.</p>
+        <p>Entre em contato com o administrador para mais informações.</p>
+      </div>
+    );
   }
 
   if (submitted) {
@@ -600,1065 +747,541 @@ export default function FormPage() {
           <h2>Informações Pessoais</h2>
           <div className="form-group">
             <label htmlFor="nome">Nome completo: <span aria-hidden="true">*</span></label>
-            <input type="text" id="nome" name="nome" required aria-required="true" aria-describedby="nome-error" />
-            <div className="error-message" id="nome-error" role="alert">Por favor, preencha seu nome completo</div>
-          </div>
-        </div>
-
-        {/* Seção de pessoas com renda */}
-        <div className="form-section" id="secaoPessoasRenda">
-          <h2>Pessoas com Renda</h2>
-          <div className="option-group">
-            <label id="label-unica-renda">Você é a única pessoa que tem renda na sua casa?</label>
-            <div className="option-options" role="radiogroup" aria-labelledby="label-unica-renda">
-              <div className="option-option">
-                <input 
-                  type="radio" 
-                  id="unicaRendaSim" 
-                  name="unicaRenda" 
-                  value="Sim" 
-                  onChange={() => setShowPessoasRenda(false)}
-                />
-                <label htmlFor="unicaRendaSim">Sim</label>
-              </div>
-              <div className="option-option">
-                <input 
-                  type="radio" 
-                  id="unicaRendaNao" 
-                  name="unicaRenda" 
-                  value="Não" 
-                  onChange={() => setShowPessoasRenda(true)}
-                />
-                <label htmlFor="unicaRendaNao">Não</label>
-              </div>
-            </div>
+            <input 
+              type="text" 
+              id="nome" 
+              name="nome" 
+              required 
+              placeholder="Digite seu nome completo"
+            />
           </div>
           
-          {showPessoasRenda && (
-            <div id="listaPessoasRenda">
-              <label>Adicione as outras pessoas que têm renda na sua casa:</label>
-              <div id="pessoasRendaContainer">
-                {pessoasRenda.map(pessoa => (
-                  <div key={pessoa.id} className="pessoa-item">
-                    <div className="patrimonio-row">
-                      <label htmlFor={`nomePessoaRenda_${pessoa.id}`}>Nome completo:</label>
-                      <input 
-                        type="text" 
-                        id={`nomePessoaRenda_${pessoa.id}`} 
-                        name={`nomePessoaRenda_${pessoa.id}`} 
-                        placeholder="Nome completo"
-                        onChange={(e) => atualizarPessoaRenda(pessoa.id, 'nome', e.target.value)}
-                      />
-                    </div>
-                    
-                    <div className="option-group">
-                      <label id={`label-precisa-concordar-${pessoa.id}`}>
-                        Você precisa que essa pessoa concorde com suas decisões financeiras?
-                      </label>
-                      <div className="option-options" role="radiogroup" aria-labelledby={`label-precisa-concordar-${pessoa.id}`}>
-                        <div className="option-option">
-                          <input 
-                            type="radio" 
-                            id={`precisaConcordarSim_${pessoa.id}`} 
-                            name={`precisaConcordar${pessoa.id}`} 
-                            value="Sim"
-                            onChange={() => atualizarPessoaRenda(pessoa.id, 'precisaConcordar', 'Sim')}
-                          />
-                          <label htmlFor={`precisaConcordarSim_${pessoa.id}`}>Sim</label>
-                        </div>
-                        <div className="option-option">
-                          <input 
-                            type="radio" 
-                            id={`precisaConcordarNao_${pessoa.id}`} 
-                            name={`precisaConcordar${pessoa.id}`} 
-                            value="Não"
-                            onChange={() => atualizarPessoaRenda(pessoa.id, 'precisaConcordar', 'Não')}
-                          />
-                          <label htmlFor={`precisaConcordarNao_${pessoa.id}`}>Não</label>
-                        </div>
-                      </div>
-                    </div>
-                    
-                    <button 
-                      type="button" 
-                      className="delete-btn" 
-                      onClick={() => removerPessoaRenda(pessoa.id)} 
-                      aria-label="Excluir pessoa"
-                    >
-                      Excluir
-                    </button>
-                  </div>
-                ))}
-              </div>
-              <button 
-                type="button" 
-                className="btn btn-adicionar" 
-                onClick={adicionarPessoaRenda}
-              >
-                <span className="sr-only">Adicionar</span> Adicionar Pessoa
-              </button>
-            </div>
-          )}
-        </div>
-
-        {/* Seção de dependentes */}
-        <div className="form-section" id="secaoDependentes">
-          <h2>Dependentes</h2>
-          <div className="option-group">
-            <label id="label-tem-dependentes">Você possui dependentes?</label>
-            <div className="option-options" role="radiogroup" aria-labelledby="label-tem-dependentes">
-              <div className="option-option">
-                <input 
-                  type="radio" 
-                  id="temDependentesSim" 
-                  name="temDependentes" 
-                  value="Sim" 
-                  onChange={() => setShowDependentes(true)}
-                />
-                <label htmlFor="temDependentesSim">Sim</label>
-              </div>
-              <div className="option-option">
-                <input 
-                  type="radio" 
-                  id="temDependentesNao" 
-                  name="temDependentes" 
-                  value="Não" 
-                  onChange={() => setShowDependentes(false)}
-                />
-                <label htmlFor="temDependentesNao">Não</label>
-              </div>
-            </div>
+          <div className="form-group">
+            <label htmlFor="email">Email:</label>
+            <input 
+              type="email" 
+              id="email" 
+              name="email" 
+              placeholder="Digite seu email"
+            />
           </div>
           
-          {showDependentes && (
-            <div id="listaDependentes">
-              <label>Adicione seus dependentes:</label>
-              <div id="dependentesContainer">
-                {dependentes.map(dependente => (
-                  <div key={dependente.id} className="dependente-item">
-                    <div className="patrimonio-row">
-                      <label htmlFor={`nomeDependente_${dependente.id}`}>Nome completo:</label>
-                      <input 
-                        type="text" 
-                        id={`nomeDependente_${dependente.id}`} 
-                        name={`nomeDependente_${dependente.id}`} 
-                        placeholder="Nome completo"
-                        onChange={(e) => atualizarDependente(dependente.id, 'nome', e.target.value)}
-                      />
-                    </div>
-                    
-                    <div className="patrimonio-row">
-                      <label htmlFor={`idadeDependente_${dependente.id}`}>Idade:</label>
-                      <input 
-                        type="number" 
-                        id={`idadeDependente_${dependente.id}`} 
-                        name={`idadeDependente_${dependente.id}`} 
-                        min="0" 
-                        max="120"
-                        onChange={(e) => atualizarDependente(dependente.id, 'idade', e.target.value)}
-                      />
-                    </div>
-                    
-                    <button 
-                      type="button" 
-                      className="delete-btn" 
-                      onClick={() => removerDependente(dependente.id)} 
-                      aria-label="Excluir dependente"
-                    >
-                      Excluir
-                    </button>
-                  </div>
-                ))}
-              </div>
-              <button 
-                type="button" 
-                className="btn btn-adicionar" 
-                onClick={adicionarDependente}
-              >
-                <span className="sr-only">Adicionar</span> Adicionar Dependente
-              </button>
-            </div>
-          )}
+          <div className="form-group">
+            <label htmlFor="telefone">Telefone: <span aria-hidden="true">*</span></label>
+            <input 
+              type="tel" 
+              id="telefone" 
+              name="telefone" 
+              required 
+              placeholder="(00) 00000-0000"
+            />
+          </div>
+          
+          <div className="form-group">
+            <label htmlFor="estadoCivil">Estado Civil: <span aria-hidden="true">*</span></label>
+            <select id="estadoCivil" name="estadoCivil" required>
+              <option value="">Selecione</option>
+              <option value="solteiro">Solteiro(a)</option>
+              <option value="casado">Casado(a)</option>
+              <option value="uniao_estavel">União Estável</option>
+              <option value="divorciado">Divorciado(a)</option>
+              <option value="viuvo">Viúvo(a)</option>
+            </select>
+          </div>
+          
+          <div className="form-group">
+            <label htmlFor="profissao">Profissão: <span aria-hidden="true">*</span></label>
+            <input 
+              type="text" 
+              id="profissao" 
+              name="profissao" 
+              required 
+              placeholder="Digite sua profissão"
+            />
+          </div>
+          
+          <div className="form-group">
+            <label htmlFor="rendaMensal">Renda Mensal: <span aria-hidden="true">*</span></label>
+            <input 
+              type="text" 
+              id="rendaMensal" 
+              name="rendaMensal" 
+              className="moeda" 
+              required 
+              placeholder="R$ 0,00"
+            />
+          </div>
         </div>
-
-        {/* Seção de patrimônios físicos */}
+        
         <div className="form-section">
-          <h2>Patrimônios Físicos</h2>
-          <label>Adicione seus patrimônios físicos:</label>
-          <div id="listaPatrimonios">
-            {patrimonios.map(patrimonio => (
-              <div key={patrimonio.id} className="patrimonio-item">
-                <div className="patrimonio-row">
-                  <label htmlFor={`descricaoPatrimonio_${patrimonio.id}`}>Descrição do patrimônio:</label>
-                  <input 
-                    type="text" 
-                    id={`descricaoPatrimonio_${patrimonio.id}`} 
-                    name={`descricaoPatrimonio_${patrimonio.id}`} 
-                    placeholder="Ex: Imóvel, Veículo, etc."
-                    onChange={(e) => atualizarPatrimonio(patrimonio.id, 'descricao', e.target.value)}
-                  />
-                </div>
-                
-                <div className="patrimonio-row">
-                  <label htmlFor={`valorPatrimonio_${patrimonio.id}`}>Valor estimado:</label>
-                  <input 
-                    type="text" 
-                    id={`valorPatrimonio_${patrimonio.id}`} 
-                    name={`valorPatrimonio_${patrimonio.id}`} 
-                    className="moeda" 
-                    placeholder="R$ 0,00"
-                    onChange={handleMoedaChange}
-                    onBlur={(e) => atualizarPatrimonio(patrimonio.id, 'valor', e.target.value)}
-                  />
-                </div>
-                
-                {/* Campo para informar se o patrimônio tem seguro */}
-                <div className="option-group">
-                  <label id={`label-tem-seguro-patrimonio-${patrimonio.id}`}>
-                    Este patrimônio possui seguro?
-                  </label>
-                  <div className="option-options" role="radiogroup" aria-labelledby={`label-tem-seguro-patrimonio-${patrimonio.id}`}>
-                    <div className="option-option">
-                      <input 
-                        type="radio" 
-                        id={`temSeguroPatrimonioSim_${patrimonio.id}`} 
-                        name={`temSeguroPatrimonio_${patrimonio.id}`} 
-                        value="Sim"
-                        onChange={() => atualizarPatrimonio(patrimonio.id, 'temSeguro', 'Sim')}
-                      />
-                      <label htmlFor={`temSeguroPatrimonioSim_${patrimonio.id}`}>Sim</label>
-                    </div>
-                    <div className="option-option">
-                      <input 
-                        type="radio" 
-                        id={`temSeguroPatrimonioNao_${patrimonio.id}`} 
-                        name={`temSeguroPatrimonio_${patrimonio.id}`} 
-                        value="Não"
-                        onChange={() => atualizarPatrimonio(patrimonio.id, 'temSeguro', 'Não')}
-                      />
-                      <label htmlFor={`temSeguroPatrimonioNao_${patrimonio.id}`}>Não</label>
-                    </div>
-                    <div className="option-option">
-                      <input 
-                        type="radio" 
-                        id={`temSeguroPatrimonioNaoSei_${patrimonio.id}`} 
-                        name={`temSeguroPatrimonio_${patrimonio.id}`} 
-                        value="Não sei"
-                        onChange={() => atualizarPatrimonio(patrimonio.id, 'temSeguro', 'Não sei')}
-                      />
-                      <label htmlFor={`temSeguroPatrimonioNaoSei_${patrimonio.id}`}>Não sei</label>
-                    </div>
+          <h2>Outras Pessoas com Renda</h2>
+          <p>Adicione informações sobre outras pessoas que contribuem com a renda familiar.</p>
+          
+          {pessoasRenda.map((pessoa) => (
+            <div key={pessoa.id} className="pessoa-item">
+              <button 
+                type="button" 
+                className="delete-btn" 
+                onClick={() => removerPessoaRenda(pessoa.id)}
+              >
+                Remover
+              </button>
+              
+              <div className="form-group">
+                <label htmlFor={`pessoa-nome-${pessoa.id}`}>Nome:</label>
+                <input 
+                  type="text" 
+                  id={`pessoa-nome-${pessoa.id}`} 
+                  value={pessoa.nome}
+                  onChange={(e) => atualizarPessoaRenda(pessoa.id, 'nome', e.target.value)}
+                  placeholder="Nome da pessoa"
+                />
+              </div>
+              
+              <div className="option-group">
+                <label>Precisa concordar com o planejamento financeiro?</label>
+                <div className="option-options">
+                  <div className="option-option">
+                    <input 
+                      type="radio" 
+                      id={`pessoa-concordar-sim-${pessoa.id}`} 
+                      name={`pessoa-concordar-${pessoa.id}`} 
+                      value="sim"
+                      checked={pessoa.precisaConcordar === 'sim'}
+                      onChange={() => atualizarPessoaRenda(pessoa.id, 'precisaConcordar', 'sim')}
+                    />
+                    <label htmlFor={`pessoa-concordar-sim-${pessoa.id}`}>Sim</label>
+                  </div>
+                  <div className="option-option">
+                    <input 
+                      type="radio" 
+                      id={`pessoa-concordar-nao-${pessoa.id}`} 
+                      name={`pessoa-concordar-${pessoa.id}`} 
+                      value="nao"
+                      checked={pessoa.precisaConcordar === 'nao'}
+                      onChange={() => atualizarPessoaRenda(pessoa.id, 'precisaConcordar', 'nao')}
+                    />
+                    <label htmlFor={`pessoa-concordar-nao-${pessoa.id}`}>Não</label>
                   </div>
                 </div>
-                
-                <button 
-                  type="button" 
-                  className="delete-btn" 
-                  onClick={() => removerPatrimonio(patrimonio.id)} 
-                  aria-label="Excluir patrimônio"
-                >
-                  Excluir
-                </button>
               </div>
-            ))}
-          </div>
+              
+              <div className="option-group">
+                <label>Declara Imposto de Renda?</label>
+                <div className="option-options">
+                  <div className="option-option">
+                    <input 
+                      type="radio" 
+                      id={`pessoa-ir-sim-${pessoa.id}`} 
+                      name={`pessoa-ir-${pessoa.id}`} 
+                      value="sim"
+                      checked={pessoa.declaraIR === 'sim'}
+                      onChange={() => atualizarPessoaRenda(pessoa.id, 'declaraIR', 'sim')}
+                    />
+                    <label htmlFor={`pessoa-ir-sim-${pessoa.id}`}>Sim</label>
+                  </div>
+                  <div className="option-option">
+                    <input 
+                      type="radio" 
+                      id={`pessoa-ir-nao-${pessoa.id}`} 
+                      name={`pessoa-ir-${pessoa.id}`} 
+                      value="nao"
+                      checked={pessoa.declaraIR === 'nao'}
+                      onChange={() => atualizarPessoaRenda(pessoa.id, 'declaraIR', 'nao')}
+                    />
+                    <label htmlFor={`pessoa-ir-nao-${pessoa.id}`}>Não</label>
+                  </div>
+                </div>
+              </div>
+              
+              {pessoa.declaraIR === 'sim' && (
+                <>
+                  <div className="form-group">
+                    <label htmlFor={`pessoa-tipo-declaracao-${pessoa.id}`}>Tipo de Declaração:</label>
+                    <select 
+                      id={`pessoa-tipo-declaracao-${pessoa.id}`}
+                      value={pessoa.tipoDeclaracao}
+                      onChange={(e) => atualizarPessoaRenda(pessoa.id, 'tipoDeclaracao', e.target.value)}
+                    >
+                      <option value="">Selecione</option>
+                      <option value="simplificada">Simplificada</option>
+                      <option value="completa">Completa</option>
+                    </select>
+                  </div>
+                  
+                  <div className="form-group">
+                    <label htmlFor={`pessoa-resultado-ir-${pessoa.id}`}>Resultado da última declaração:</label>
+                    <select 
+                      id={`pessoa-resultado-ir-${pessoa.id}`}
+                      value={pessoa.resultadoIR}
+                      onChange={(e) => atualizarPessoaRenda(pessoa.id, 'resultadoIR', e.target.value)}
+                    >
+                      <option value="">Selecione</option>
+                      <option value="imposto_pagar">Imposto a Pagar</option>
+                      <option value="restituicao">Restituição</option>
+                      <option value="zero">Zero (nem pagou, nem recebeu)</option>
+                    </select>
+                  </div>
+                </>
+              )}
+              
+              <div className="option-group">
+                <label>Possui plano de saúde?</label>
+                <div className="option-options">
+                  <div className="option-option">
+                    <input 
+                      type="radio" 
+                      id={`pessoa-plano-saude-sim-${pessoa.id}`} 
+                      name={`pessoa-plano-saude-${pessoa.id}`} 
+                      value="sim"
+                      checked={pessoa.planoSaude === 'sim'}
+                      onChange={() => atualizarPessoaRenda(pessoa.id, 'planoSaude', 'sim')}
+                    />
+                    <label htmlFor={`pessoa-plano-saude-sim-${pessoa.id}`}>Sim</label>
+                  </div>
+                  <div className="option-option">
+                    <input 
+                      type="radio" 
+                      id={`pessoa-plano-saude-nao-${pessoa.id}`} 
+                      name={`pessoa-plano-saude-${pessoa.id}`} 
+                      value="nao"
+                      checked={pessoa.planoSaude === 'nao'}
+                      onChange={() => atualizarPessoaRenda(pessoa.id, 'planoSaude', 'nao')}
+                    />
+                    <label htmlFor={`pessoa-plano-saude-nao-${pessoa.id}`}>Não</label>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="option-group">
+                <label>Possui seguro de vida?</label>
+                <div className="option-options">
+                  <div className="option-option">
+                    <input 
+                      type="radio" 
+                      id={`pessoa-seguro-vida-sim-${pessoa.id}`} 
+                      name={`pessoa-seguro-vida-${pessoa.id}`} 
+                      value="sim"
+                      checked={pessoa.seguroVida === 'sim'}
+                      onChange={() => atualizarPessoaRenda(pessoa.id, 'seguroVida', 'sim')}
+                    />
+                    <label htmlFor={`pessoa-seguro-vida-sim-${pessoa.id}`}>Sim</label>
+                  </div>
+                  <div className="option-option">
+                    <input 
+                      type="radio" 
+                      id={`pessoa-seguro-vida-nao-${pessoa.id}`} 
+                      name={`pessoa-seguro-vida-${pessoa.id}`} 
+                      value="nao"
+                      checked={pessoa.seguroVida === 'nao'}
+                      onChange={() => atualizarPessoaRenda(pessoa.id, 'seguroVida', 'nao')}
+                    />
+                    <label htmlFor={`pessoa-seguro-vida-nao-${pessoa.id}`}>Não</label>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="form-group">
+                <label htmlFor={`pessoa-patrimonio-liquido-${pessoa.id}`}>Patrimônio Líquido Estimado:</label>
+                <input 
+                  type="text" 
+                  id={`pessoa-patrimonio-liquido-${pessoa.id}`} 
+                  className="moeda"
+                  value={pessoa.patrimonioLiquido}
+                  onChange={(e) => {
+                    handleMoedaChange(e);
+                    atualizarPessoaRenda(pessoa.id, 'patrimonioLiquido', e.target.value);
+                  }}
+                  placeholder="R$ 0,00"
+                />
+              </div>
+            </div>
+          ))}
+          
+          <button 
+            type="button" 
+            className="btn btn-adicionar" 
+            onClick={adicionarPessoaRenda}
+          >
+            + Adicionar Pessoa com Renda
+          </button>
+        </div>
+        
+        <div className="form-section">
+          <h2>Dependentes</h2>
+          <p>Adicione informações sobre seus dependentes.</p>
+          
+          {dependentes.map((dependente) => (
+            <div key={dependente.id} className="dependente-item">
+              <button 
+                type="button" 
+                className="delete-btn" 
+                onClick={() => removerDependente(dependente.id)}
+              >
+                Remover
+              </button>
+              
+              <div className="form-group">
+                <label htmlFor={`dependente-nome-${dependente.id}`}>Nome:</label>
+                <input 
+                  type="text" 
+                  id={`dependente-nome-${dependente.id}`} 
+                  value={dependente.nome}
+                  onChange={(e) => atualizarDependente(dependente.id, 'nome', e.target.value)}
+                  placeholder="Nome do dependente"
+                />
+              </div>
+              
+              <div className="form-group">
+                <label htmlFor={`dependente-idade-${dependente.id}`}>Idade:</label>
+                <input 
+                  type="number" 
+                  id={`dependente-idade-${dependente.id}`} 
+                  value={dependente.idade}
+                  onChange={(e) => atualizarDependente(dependente.id, 'idade', e.target.value)}
+                  placeholder="Idade"
+                  min="0"
+                  max="120"
+                />
+              </div>
+              
+              <div className="option-group">
+                <label>Possui plano de saúde?</label>
+                <div className="option-options">
+                  <div className="option-option">
+                    <input 
+                      type="radio" 
+                      id={`dependente-plano-saude-sim-${dependente.id}`} 
+                      name={`dependente-plano-saude-${dependente.id}`} 
+                      value="sim"
+                      checked={dependente.planoSaude === 'sim'}
+                      onChange={() => atualizarDependente(dependente.id, 'planoSaude', 'sim')}
+                    />
+                    <label htmlFor={`dependente-plano-saude-sim-${dependente.id}`}>Sim</label>
+                  </div>
+                  <div className="option-option">
+                    <input 
+                      type="radio" 
+                      id={`dependente-plano-saude-nao-${dependente.id}`} 
+                      name={`dependente-plano-saude-${dependente.id}`} 
+                      value="nao"
+                      checked={dependente.planoSaude === 'nao'}
+                      onChange={() => atualizarDependente(dependente.id, 'planoSaude', 'nao')}
+                    />
+                    <label htmlFor={`dependente-plano-saude-nao-${dependente.id}`}>Não</label>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ))}
+          
+          <button 
+            type="button" 
+            className="btn btn-adicionar" 
+            onClick={adicionarDependente}
+          >
+            + Adicionar Dependente
+          </button>
+        </div>
+        
+        <div className="form-section">
+          <h2>Patrimônios</h2>
+          <p>Adicione informações sobre seus principais bens e patrimônios.</p>
+          
+          {patrimonios.map((patrimonio) => (
+            <div key={patrimonio.id} className="patrimonio-item">
+              <button 
+                type="button" 
+                className="delete-btn" 
+                onClick={() => removerPatrimonio(patrimonio.id)}
+              >
+                Remover
+              </button>
+              
+              <div className="form-group">
+                <label htmlFor={`patrimonio-descricao-${patrimonio.id}`}>Descrição:</label>
+                <input 
+                  type="text" 
+                  id={`patrimonio-descricao-${patrimonio.id}`} 
+                  value={patrimonio.descricao}
+                  onChange={(e) => atualizarPatrimonio(patrimonio.id, 'descricao', e.target.value)}
+                  placeholder="Ex: Imóvel, Veículo, Investimentos"
+                />
+              </div>
+              
+              <div className="form-group">
+                <label htmlFor={`patrimonio-valor-${patrimonio.id}`}>Valor Estimado:</label>
+                <input 
+                  type="text" 
+                  id={`patrimonio-valor-${patrimonio.id}`} 
+                  className="moeda"
+                  value={patrimonio.valor}
+                  onChange={(e) => {
+                    handleMoedaChange(e);
+                    atualizarPatrimonio(patrimonio.id, 'valor', e.target.value);
+                  }}
+                  placeholder="R$ 0,00"
+                />
+              </div>
+              
+              <div className="option-group">
+                <label>Possui seguro?</label>
+                <div className="option-options">
+                  <div className="option-option">
+                    <input 
+                      type="radio" 
+                      id={`patrimonio-seguro-sim-${patrimonio.id}`} 
+                      name={`patrimonio-seguro-${patrimonio.id}`} 
+                      value="sim"
+                      checked={patrimonio.temSeguro === 'sim'}
+                      onChange={() => atualizarPatrimonio(patrimonio.id, 'temSeguro', 'sim')}
+                    />
+                    <label htmlFor={`patrimonio-seguro-sim-${patrimonio.id}`}>Sim</label>
+                  </div>
+                  <div className="option-option">
+                    <input 
+                      type="radio" 
+                      id={`patrimonio-seguro-nao-${patrimonio.id}`} 
+                      name={`patrimonio-seguro-${patrimonio.id}`} 
+                      value="nao"
+                      checked={patrimonio.temSeguro === 'nao'}
+                      onChange={() => atualizarPatrimonio(patrimonio.id, 'temSeguro', 'nao')}
+                    />
+                    <label htmlFor={`patrimonio-seguro-nao-${patrimonio.id}`}>Não</label>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ))}
+          
           <button 
             type="button" 
             className="btn btn-adicionar" 
             onClick={adicionarPatrimonio}
           >
-            <span className="sr-only">Adicionar</span> Adicionar Patrimônio
+            + Adicionar Patrimônio
           </button>
         </div>
-
-        {/* Seção de seguros e planos */}
-        <div className="form-section">
-          <h2>Seguros e Planos</h2>
-          
-          {/* Plano de saúde do cliente principal */}
-          <div className="option-group">
-            <label id="label-plano-saude">Você possui plano de saúde?</label>
-            <div className="option-options" role="radiogroup" aria-labelledby="label-plano-saude">
-              <div className="option-option">
-                <input type="radio" id="planoSaudeSim" name="planoSaude" value="Sim" />
-                <label htmlFor="planoSaudeSim">Sim</label>
-              </div>
-              <div className="option-option">
-                <input type="radio" id="planoSaudeNao" name="planoSaude" value="Não" />
-                <label htmlFor="planoSaudeNao">Não</label>
-              </div>
-              <div className="option-option">
-                <input type="radio" id="planoSaudeNaoSei" name="planoSaude" value="Não sei" />
-                <label htmlFor="planoSaudeNaoSei">Não sei</label>
-              </div>
-            </div>
-          </div>
-
-          {/* Planos de saúde das outras pessoas com renda */}
-          {pessoasRenda.length > 0 && (
-            <div className="option-group">
-              {pessoasRenda.map(pessoa => (
-                <div key={`plano-saude-${pessoa.id}`}>
-                  <label id={`label-plano-saude-pessoa-${pessoa.id}`}>
-                    {pessoa.nome || 'Esta pessoa'} possui plano de saúde?
-                  </label>
-                  <div className="option-options" role="radiogroup" aria-labelledby={`label-plano-saude-pessoa-${pessoa.id}`}>
-                    <div className="option-option">
-                      <input 
-                        type="radio" 
-                        id={`planoSaudePessoaSim_${pessoa.id}`} 
-                        name={`planoSaudePessoa_${pessoa.id}`} 
-                        value="Sim"
-                        onChange={() => atualizarPessoaRenda(pessoa.id, 'planoSaude', 'Sim')}
-                      />
-                      <label htmlFor={`planoSaudePessoaSim_${pessoa.id}`}>Sim</label>
-                    </div>
-                    <div className="option-option">
-                      <input 
-                        type="radio" 
-                        id={`planoSaudePessoaNao_${pessoa.id}`} 
-                        name={`planoSaudePessoa_${pessoa.id}`} 
-                        value="Não"
-                        onChange={() => atualizarPessoaRenda(pessoa.id, 'planoSaude', 'Não')}
-                      />
-                      <label htmlFor={`planoSaudePessoaNao_${pessoa.id}`}>Não</label>
-                    </div>
-                    <div className="option-option">
-                      <input 
-                        type="radio" 
-                        id={`planoSaudePessoaNaoSei_${pessoa.id}`} 
-                        name={`planoSaudePessoa_${pessoa.id}`} 
-                        value="Não sei"
-                        onChange={() => atualizarPessoaRenda(pessoa.id, 'planoSaude', 'Não sei')}
-                      />
-                      <label htmlFor={`planoSaudePessoaNaoSei_${pessoa.id}`}>Não sei</label>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-          
-          {/* Planos de saúde dos dependentes */}
-          {dependentes.length > 0 && (
-            <div className="option-group">
-              {dependentes.map(dependente => (
-                <div key={`plano-saude-dependente-${dependente.id}`}>
-                  <label id={`label-plano-saude-dependente-${dependente.id}`}>
-                    {dependente.nome || 'Este dependente'} possui plano de saúde?
-                  </label>
-                  <div className="option-options" role="radiogroup" aria-labelledby={`label-plano-saude-dependente-${dependente.id}`}>
-                    <div className="option-option">
-                      <input 
-                        type="radio" 
-                        id={`planoSaudeDependenteSim_${dependente.id}`} 
-                        name={`planoSaudeDependente_${dependente.id}`} 
-                        value="Sim"
-                        onChange={() => atualizarDependente(dependente.id, 'planoSaude', 'Sim')}
-                      />
-                      <label htmlFor={`planoSaudeDependenteSim_${dependente.id}`}>Sim</label>
-                    </div>
-                    <div className="option-option">
-                      <input 
-                        type="radio" 
-                        id={`planoSaudeDependenteNao_${dependente.id}`} 
-                        name={`planoSaudeDependente_${dependente.id}`} 
-                        value="Não"
-                        onChange={() => atualizarDependente(dependente.id, 'planoSaude', 'Não')}
-                      />
-                      <label htmlFor={`planoSaudeDependenteNao_${dependente.id}`}>Não</label>
-                    </div>
-                    <div className="option-option">
-                      <input 
-                        type="radio" 
-                        id={`planoSaudeDependenteNaoSei_${dependente.id}`} 
-                        name={`planoSaudeDependente_${dependente.id}`} 
-                        value="Não sei"
-                        onChange={() => atualizarDependente(dependente.id, 'planoSaude', 'Não sei')}
-                      />
-                      <label htmlFor={`planoSaudeDependenteNaoSei_${dependente.id}`}>Não sei</label>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-
-          {/* Seguro de vida do cliente principal */}
-          <div className="option-group">
-            <label id="label-seguro-vida">Você possui seguro de vida?</label>
-            <div className="option-options" role="radiogroup" aria-labelledby="label-seguro-vida">
-              <div className="option-option">
-                <input type="radio" id="seguroVidaSim" name="seguroVida" value="Sim" />
-                <label htmlFor="seguroVidaSim">Sim</label>
-              </div>
-              <div className="option-option">
-                <input type="radio" id="seguroVidaNao" name="seguroVida" value="Não" />
-                <label htmlFor="seguroVidaNao">Não</label>
-              </div>
-              <div className="option-option">
-                <input type="radio" id="seguroVidaNaoSei" name="seguroVida" value="Não sei" />
-                <label htmlFor="seguroVidaNaoSei">Não sei</label>
-              </div>
-            </div>
-          </div>
-
-          {/* Seguros de vida das outras pessoas com renda */}
-          {pessoasRenda.length > 0 && (
-            <div className="option-group">
-              {pessoasRenda.map(pessoa => (
-                <div key={`seguro-vida-${pessoa.id}`}>
-                  <label id={`label-seguro-vida-pessoa-${pessoa.id}`}>
-                    {pessoa.nome || 'Esta pessoa'} possui seguro de vida?
-                  </label>
-                  <div className="option-options" role="radiogroup" aria-labelledby={`label-seguro-vida-pessoa-${pessoa.id}`}>
-                    <div className="option-option">
-                      <input 
-                        type="radio" 
-                        id={`seguroVidaPessoaSim_${pessoa.id}`} 
-                        name={`seguroVidaPessoa_${pessoa.id}`} 
-                        value="Sim"
-                        onChange={() => atualizarPessoaRenda(pessoa.id, 'seguroVida', 'Sim')}
-                      />
-                      <label htmlFor={`seguroVidaPessoaSim_${pessoa.id}`}>Sim</label>
-                    </div>
-                    <div className="option-option">
-                      <input 
-                        type="radio" 
-                        id={`seguroVidaPessoaNao_${pessoa.id}`} 
-                        name={`seguroVidaPessoa_${pessoa.id}`} 
-                        value="Não"
-                        onChange={() => atualizarPessoaRenda(pessoa.id, 'seguroVida', 'Não')}
-                      />
-                      <label htmlFor={`seguroVidaPessoaNao_${pessoa.id}`}>Não</label>
-                    </div>
-                    <div className="option-option">
-                      <input 
-                        type="radio" 
-                        id={`seguroVidaPessoaNaoSei_${pessoa.id}`} 
-                        name={`seguroVidaPessoa_${pessoa.id}`} 
-                        value="Não sei"
-                        onChange={() => atualizarPessoaRenda(pessoa.id, 'seguroVida', 'Não sei')}
-                      />
-                      <label htmlFor={`seguroVidaPessoaNaoSei_${pessoa.id}`}>Não sei</label>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* Seção de patrimônio líquido */}
-        <div className="form-section">
-          <h2>Patrimônio Líquido</h2>
-          
-          {/* Patrimônio líquido do cliente principal */}
-          <div className="form-group">
-            <label htmlFor="patrimonioLiquido">
-              Seu patrimônio líquido:
-              <div className="tooltip">
-                <span className="tooltip-icon">?</span>
-                <span className="tooltip-text">Soma de todos os seus bens menos suas dívidas</span>
-              </div>
-            </label>
-            <input 
-              type="text" 
-              id="patrimonioLiquido" 
-              name="patrimonioLiquido" 
-              className="moeda" 
-              placeholder="R$ 0,00" 
-              onChange={handleMoedaChange}
-            />
-          </div>
-          
-          {/* Patrimônio líquido das outras pessoas com renda */}
-          {pessoasRenda.map(pessoa => (
-            <div key={`patrimonio-liquido-${pessoa.id}`} className="form-group">
-              <label htmlFor={`patrimonioLiquidoPessoa_${pessoa.id}`}>
-                Patrimônio líquido de {pessoa.nome || 'esta pessoa'}:
-                <div className="tooltip">
-                  <span className="tooltip-icon">?</span>
-                  <span className="tooltip-text">Soma de todos os bens menos as dívidas</span>
-                </div>
-              </label>
-              <input 
-                type="text" 
-                id={`patrimonioLiquidoPessoa_${pessoa.id}`} 
-                name={`patrimonioLiquidoPessoa_${pessoa.id}`} 
-                className="moeda" 
-                placeholder="R$ 0,00" 
-                onChange={handleMoedaChange}
-                onBlur={(e) => atualizarPessoaRenda(pessoa.id, 'patrimonioLiquido', e.target.value)}
-              />
-            </div>
-          ))}
-        </div>
-
-        {/* Seção de imposto de renda */}
-        <div className="form-section">
-          <h2>Imposto de Renda</h2>
-          
-          {/* Perguntas do cliente principal */}
-          <div className="option-group">
-            <label id="label-declara-ir">Você declara imposto de renda?</label>
-            <div className="option-options" role="radiogroup" aria-labelledby="label-declara-ir">
-              <div className="option-option">
-                <input 
-                  type="radio" 
-                  id="declaraIRSim" 
-                  name="declaraIR" 
-                  value="Sim" 
-                  onChange={() => setShowDeclaracaoIR(true)}
-                />
-                <label htmlFor="declaraIRSim">Sim</label>
-              </div>
-              <div className="option-option">
-                <input 
-                  type="radio" 
-                  id="declaraIRNao" 
-                  name="declaraIR" 
-                  value="Não" 
-                  onChange={() => setShowDeclaracaoIR(false)}
-                />
-                <label htmlFor="declaraIRNao">Não</label>
-              </div>
-            </div>
-          </div>
-
-          {showDeclaracaoIR && (
-            <div id="declaracaoIRCliente">
-              <div className="option-group">
-                <label id="label-tipo-declaracao">Se sim, qual o tipo da sua declaração?</label>
-                <div className="option-options" role="radiogroup" aria-labelledby="label-tipo-declaracao">
-                  <div className="option-option">
-                    <input type="radio" id="tipoCompleta" name="tipoDeclaracao" value="Completa" />
-                    <label htmlFor="tipoCompleta">Completa</label>
-                  </div>
-                  <div className="option-option">
-                    <input type="radio" id="tipoSimplificada" name="tipoDeclaracao" value="Simplificada" />
-                    <label htmlFor="tipoSimplificada">Simplificada</label>
-                  </div>
-                  <div className="option-option">
-                    <input type="radio" id="tipoNaoSei" name="tipoDeclaracao" value="Não sei" />
-                    <label htmlFor="tipoNaoSei">Não sei</label>
-                  </div>
-                </div>
-              </div>
-
-              <div className="option-group">
-                <label id="label-resultado-ir">Resultado do seu IR:</label>
-                <div className="option-options" role="radiogroup" aria-labelledby="label-resultado-ir">
-                  <div className="option-option">
-                    <input type="radio" id="resultadoIRRestitui" name="resultadoIR" value="Restitui" />
-                    <label htmlFor="resultadoIRRestitui">Restitui</label>
-                  </div>
-                  <div className="option-option">
-                    <input type="radio" id="resultadoIRPaga" name="resultadoIR" value="Paga" />
-                    <label htmlFor="resultadoIRPaga">Paga</label>
-                  </div>
-                  <div className="option-option">
-                    <input type="radio" id="resultadoIRIsento" name="resultadoIR" value="Isento" />
-                    <label htmlFor="resultadoIRIsento">Isento</label>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Perguntas de IR para as outras pessoas com renda */}
-          {pessoasRenda.map(pessoa => (
-            <div key={`ir-pessoa-${pessoa.id}`}>
-              <div className="option-group">
-                <label id={`label-declara-ir-pessoa-${pessoa.id}`}>
-                  {pessoa.nome || 'Esta pessoa'} declara imposto de renda?
-                </label>
-                <div className="option-options" role="radiogroup" aria-labelledby={`label-declara-ir-pessoa-${pessoa.id}`}>
-                  <div className="option-option">
-                    <input 
-                      type="radio" 
-                      id={`declaraIRPessoaSim_${pessoa.id}`} 
-                      name={`declaraIRPessoa_${pessoa.id}`} 
-                      value="Sim"
-                      onChange={() => atualizarPessoaRenda(pessoa.id, 'declaraIR', 'Sim')}
-                    />
-                    <label htmlFor={`declaraIRPessoaSim_${pessoa.id}`}>Sim</label>
-                  </div>
-                  <div className="option-option">
-                    <input 
-                      type="radio" 
-                      id={`declaraIRPessoaNao_${pessoa.id}`} 
-                      name={`declaraIRPessoa_${pessoa.id}`} 
-                      value="Não"
-                      onChange={() => atualizarPessoaRenda(pessoa.id, 'declaraIR', 'Não')}
-                    />
-                    <label htmlFor={`declaraIRPessoaNao_${pessoa.id}`}>Não</label>
-                  </div>
-                </div>
-              </div>
-              
-              {pessoa.declaraIR === 'Sim' && (
-                <>
-                  <div className="option-group">
-                    <label id={`label-tipo-declaracao-pessoa-${pessoa.id}`}>
-                      Qual o tipo da declaração de {pessoa.nome || 'esta pessoa'}?
-                    </label>
-                    <div className="option-options" role="radiogroup" aria-labelledby={`label-tipo-declaracao-pessoa-${pessoa.id}`}>
-                      <div className="option-option">
-                        <input 
-                          type="radio" 
-                          id={`tipoCompletaPessoa_${pessoa.id}`} 
-                          name={`tipoDeclaracaoPessoa_${pessoa.id}`} 
-                          value="Completa"
-                          onChange={() => atualizarPessoaRenda(pessoa.id, 'tipoDeclaracao', 'Completa')}
-                        />
-                        <label htmlFor={`tipoCompletaPessoa_${pessoa.id}`}>Completa</label>
-                      </div>
-                      <div className="option-option">
-                        <input 
-                          type="radio" 
-                          id={`tipoSimplificadaPessoa_${pessoa.id}`} 
-                          name={`tipoDeclaracaoPessoa_${pessoa.id}`} 
-                          value="Simplificada"
-                          onChange={() => atualizarPessoaRenda(pessoa.id, 'tipoDeclaracao', 'Simplificada')}
-                        />
-                        <label htmlFor={`tipoSimplificadaPessoa_${pessoa.id}`}>Simplificada</label>
-                      </div>
-                      <div className="option-option">
-                        <input 
-                          type="radio" 
-                          id={`tipoNaoSeiPessoa_${pessoa.id}`} 
-                          name={`tipoDeclaracaoPessoa_${pessoa.id}`} 
-                          value="Não sei"
-                          onChange={() => atualizarPessoaRenda(pessoa.id, 'tipoDeclaracao', 'Não sei')}
-                        />
-                        <label htmlFor={`tipoNaoSeiPessoa_${pessoa.id}`}>Não sei</label>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="option-group">
-                    <label id={`label-resultado-ir-pessoa-${pessoa.id}`}>
-                      Resultado do IR de {pessoa.nome || 'esta pessoa'}:
-                    </label>
-                    <div className="option-options" role="radiogroup" aria-labelledby={`label-resultado-ir-pessoa-${pessoa.id}`}>
-                      <div className="option-option">
-                        <input 
-                          type="radio" 
-                          id={`resultadoIRRestituiPessoa_${pessoa.id}`} 
-                          name={`resultadoIRPessoa_${pessoa.id}`} 
-                          value="Restitui"
-                          onChange={() => atualizarPessoaRenda(pessoa.id, 'resultadoIR', 'Restitui')}
-                        />
-                        <label htmlFor={`resultadoIRRestituiPessoa_${pessoa.id}`}>Restitui</label>
-                      </div>
-                      <div className="option-option">
-                        <input 
-                          type="radio" 
-                          id={`resultadoIRPagaPessoa_${pessoa.id}`} 
-                          name={`resultadoIRPessoa_${pessoa.id}`} 
-                          value="Paga"
-                          onChange={() => atualizarPessoaRenda(pessoa.id, 'resultadoIR', 'Paga')}
-                        />
-                        <label htmlFor={`resultadoIRPagaPessoa_${pessoa.id}`}>Paga</label>
-                      </div>
-                      <div className="option-option">
-                        <input 
-                          type="radio" 
-                          id={`resultadoIRIsentoPessoa_${pessoa.id}`} 
-                          name={`resultadoIRPessoa_${pessoa.id}`} 
-                          value="Isento"
-                          onChange={() => atualizarPessoaRenda(pessoa.id, 'resultadoIR', 'Isento')}
-                        />
-                        <label htmlFor={`resultadoIRIsentoPessoa_${pessoa.id}`}>Isento</label>
-                      </div>
-                    </div>
-                  </div>
-                </>
-              )}
-            </div>
-          ))}
-        </div>
-
-        {/* Seção de fluxo de caixa */}
-        <div className="form-section" id="secaoFluxoCaixa">
-          <h2>Fluxo de Caixa</h2>
-          
-          {/* Opção para escolher entre orçamento individual ou somado (apenas se houver mais de uma pessoa com renda) */}
-          {multiplasRendas && (
-            <div id="opcaoTipoFluxoCaixa">
-              <div className="option-group">
-                <label id="label-tipo-fluxo-caixa">Como você deseja informar o orçamento?</label>
-                <div className="option-options" role="radiogroup" aria-labelledby="label-tipo-fluxo-caixa">
-                  <div className="option-option">
-                    <input 
-                      type="radio" 
-                      id="fluxoCaixaSomado" 
-                      name="tipoFluxoCaixa" 
-                      value="Somado"
-                      onChange={() => setFluxoCaixaTipo('somado')}
-                      checked={fluxoCaixaTipo === 'somado'}
-                    />
-                    <label htmlFor="fluxoCaixaSomado">Valores somados de todos os integrantes</label>
-                  </div>
-                  <div className="option-option">
-                    <input 
-                      type="radio" 
-                      id="fluxoCaixaIndividual" 
-                      name="tipoFluxoCaixa" 
-                      value="Individual"
-                      onChange={() => setFluxoCaixaTipo('individual')}
-                      checked={fluxoCaixaTipo === 'individual'}
-                    />
-                    <label htmlFor="fluxoCaixaIndividual">Valores individuais para cada pessoa</label>
-                  </div>
-                </div>
-              </div>
-              
-              {/* Opção para informar se sabe os dados dos outros (apenas se escolher individual) */}
-              {fluxoCaixaTipo === 'individual' && (
-                <div className="option-group">
-                  <label id="label-sabe-dados-outros">Você sabe as informações financeiras das outras pessoas?</label>
-                  <div className="option-options" role="radiogroup" aria-labelledby="label-sabe-dados-outros">
-                    <div className="option-option">
-                      <input 
-                        type="radio" 
-                        id="sabeDadosOutrosSim" 
-                        name="sabeDadosOutros" 
-                        value="Sim"
-                        onChange={() => setSabeDadosOutros(true)}
-                        checked={sabeDadosOutros}
-                      />
-                      <label htmlFor="sabeDadosOutrosSim">Sim</label>
-                    </div>
-                    <div className="option-option">
-                      <input 
-                        type="radio" 
-                        id="sabeDadosOutrosNao" 
-                        name="sabeDadosOutros" 
-                        value="Não"
-                        onChange={() => setSabeDadosOutros(false)}
-                        checked={!sabeDadosOutros}
-                      />
-                      <label htmlFor="sabeDadosOutrosNao">Não</label>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-          
-          {/* Fluxo de caixa somado (padrão ou se escolhido) */}
-          {(fluxoCaixaTipo === 'somado' || !multiplasRendas) && (
-            <div id="fluxoCaixaSomadoContainer">
-              <div className="form-group">
-                <label id="labelRenda" htmlFor="renda">
-                  {multiplasRendas ? 'Renda mensal total (somando todas as pessoas):' : 'Renda mensal:'}
-                </label>
-                <input 
-                  type="text" 
-                  id="renda" 
-                  name="renda" 
-                  className="moeda" 
-                  placeholder="R$ 0,00" 
-                  onChange={handleMoedaChange}
-                />
-              </div>
-              <div className="form-group">
-                <label id="labelCustosFixos" htmlFor="custosFixos">
-                  {multiplasRendas ? 'Custos fixos mensais totais:' : 'Custos fixos mensais:'}
-                  <div className="tooltip">
-                    <span className="tooltip-icon">?</span>
-                    <span className="tooltip-text">Despesas que não variam mensalmente, como aluguel, financiamentos, etc.</span>
-                  </div>
-                </label>
-                <input 
-                  type="text" 
-                  id="custosFixos" 
-                  name="custosFixos" 
-                  className="moeda" 
-                  placeholder="R$ 0,00" 
-                  onChange={handleMoedaChange}
-                />
-              </div>
-              <div className="form-group">
-                <label id="labelCustosVariaveis" htmlFor="custosVariaveis">
-                  {multiplasRendas ? 'Custos variáveis mensais totais:' : 'Custos variáveis mensais:'}
-                  <div className="tooltip">
-                    <span className="tooltip-icon">?</span>
-                    <span className="tooltip-text">Despesas que podem variar mensalmente, como alimentação, lazer, etc.</span>
-                  </div>
-                </label>
-                <input 
-                  type="text" 
-                  id="custosVariaveis" 
-                  name="custosVariaveis" 
-                  className="moeda" 
-                  placeholder="R$ 0,00" 
-                  onChange={handleMoedaChange}
-                />
-              </div>
-              <div className="form-group">
-                <label id="labelPoupanca" htmlFor="poupancaMensal">
-                  {multiplasRendas ? 'Quanto vocês conseguem poupar todo mês (total):' : 'Quanto você consegue poupar todo mês:'}
-                </label>
-                <input 
-                  type="text" 
-                  id="poupancaMensal" 
-                  name="poupancaMensal" 
-                  className="moeda" 
-                  placeholder="R$ 0,00" 
-                  onChange={handleMoedaChange}
-                />
-              </div>
-            </div>
-          )}
-          
-          {/* Fluxo de caixa individual (se escolhido) */}
-          {fluxoCaixaTipo === 'individual' && multiplasRendas && (
-            <div id="fluxoCaixaIndividualContainer">
-              {/* Container para o cliente principal */}
-              <div className="pessoa-fluxo-caixa">
-                <h3>Seu orçamento</h3>
-                <div className="form-group">
-                  <label htmlFor="rendaCliente">Sua renda mensal:</label>
-                  <input 
-                    type="text" 
-                    id="rendaCliente" 
-                    name="rendaCliente" 
-                    className="moeda" 
-                    placeholder="R$ 0,00" 
-                    onChange={handleMoedaChange}
-                  />
-                </div>
-                <div className="form-group">
-                  <label htmlFor="custosFixosCliente">
-                    Seus custos fixos mensais:
-                    <div className="tooltip">
-                      <span className="tooltip-icon">?</span>
-                      <span className="tooltip-text">Despesas que não variam mensalmente, como aluguel, financiamentos, etc.</span>
-                    </div>
-                  </label>
-                  <input 
-                    type="text" 
-                    id="custosFixosCliente" 
-                    name="custosFixosCliente" 
-                    className="moeda" 
-                    placeholder="R$ 0,00" 
-                    onChange={handleMoedaChange}
-                  />
-                </div>
-                <div className="form-group">
-                  <label htmlFor="custosVariaveisCliente">
-                    Seus custos variáveis mensais:
-                    <div className="tooltip">
-                      <span className="tooltip-icon">?</span>
-                      <span className="tooltip-text">Despesas que podem variar mensalmente, como alimentação, lazer, etc.</span>
-                    </div>
-                  </label>
-                  <input 
-                    type="text" 
-                    id="custosVariaveisCliente" 
-                    name="custosVariaveisCliente" 
-                    className="moeda" 
-                    placeholder="R$ 0,00" 
-                    onChange={handleMoedaChange}
-                  />
-                </div>
-                <div className="form-group">
-                  <label htmlFor="poupancaMensalCliente">Quanto você consegue poupar todo mês:</label>
-                  <input 
-                    type="text" 
-                    id="poupancaMensalCliente" 
-                    name="poupancaMensalCliente" 
-                    className="moeda" 
-                    placeholder="R$ 0,00" 
-                    onChange={handleMoedaChange}
-                  />
-                </div>
-              </div>
-              
-              {/* Container para as outras pessoas com renda (apenas se sabe os dados) */}
-              {sabeDadosOutros && pessoasRenda.map(pessoa => (
-                <div key={`fluxo-caixa-${pessoa.id}`} className="pessoa-fluxo-caixa">
-                  <h3>Orçamento de {pessoa.nome || 'outra pessoa'}</h3>
-                  <div className="form-group">
-                    <label htmlFor={`rendaPessoa_${pessoa.id}`}>Renda mensal:</label>
-                    <input 
-                      type="text" 
-                      id={`rendaPessoa_${pessoa.id}`} 
-                      name={`rendaPessoa_${pessoa.id}`} 
-                      className="moeda" 
-                      placeholder="R$ 0,00" 
-                      onChange={handleMoedaChange}
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label htmlFor={`custosFixosPessoa_${pessoa.id}`}>
-                      Custos fixos mensais:
-                      <div className="tooltip">
-                        <span className="tooltip-icon">?</span>
-                        <span className="tooltip-text">Despesas que não variam mensalmente, como aluguel, financiamentos, etc.</span>
-                      </div>
-                    </label>
-                    <input 
-                      type="text" 
-                      id={`custosFixosPessoa_${pessoa.id}`} 
-                      name={`custosFixosPessoa_${pessoa.id}`} 
-                      className="moeda" 
-                      placeholder="R$ 0,00" 
-                      onChange={handleMoedaChange}
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label htmlFor={`custosVariaveisPessoa_${pessoa.id}`}>
-                      Custos variáveis mensais:
-                      <div className="tooltip">
-                        <span className="tooltip-icon">?</span>
-                        <span className="tooltip-text">Despesas que podem variar mensalmente, como alimentação, lazer, etc.</span>
-                      </div>
-                    </label>
-                    <input 
-                      type="text" 
-                      id={`custosVariaveisPessoa_${pessoa.id}`} 
-                      name={`custosVariaveisPessoa_${pessoa.id}`} 
-                      className="moeda" 
-                      placeholder="R$ 0,00" 
-                      onChange={handleMoedaChange}
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label htmlFor={`poupancaMensalPessoa_${pessoa.id}`}>Quanto consegue poupar todo mês:</label>
-                    <input 
-                      type="text" 
-                      id={`poupancaMensalPessoa_${pessoa.id}`} 
-                      name={`poupancaMensalPessoa_${pessoa.id}`} 
-                      className="moeda" 
-                      placeholder="R$ 0,00" 
-                      onChange={handleMoedaChange}
-                    />
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* Seção de cartões e contas */}
-        <div className="form-section" id="secaoCartoesContas">
-          <h2>Cartões e Contas</h2>
-          
-          <div className="option-group">
-            <label id="labelMilhas" htmlFor="usaMilhas">Você reduz custos de viagens utilizando milhas com frequência?</label>
-            <div className="option-options" role="radiogroup" aria-labelledby="labelMilhas">
-              <div className="option-option">
-                <input type="radio" id="usaMilhasSim" name="usaMilhas" value="Sim" />
-                <label htmlFor="usaMilhasSim">Sim</label>
-              </div>
-              <div className="option-option">
-                <input type="radio" id="usaMilhasNao" name="usaMilhas" value="Não" />
-                <label htmlFor="usaMilhasNao">Não</label>
-              </div>
-            </div>
-          </div>
-
-          <div className="option-group">
-            <label id="label-sem-tarifas">
-              {multiplasRendas ? 'Os cartões e contas de vocês são livres de tarifas?' : 'Seus cartões e contas são livres de tarifas?'}
-            </label>
-            <div className="option-options" role="radiogroup" aria-labelledby="label-sem-tarifas">
-              <div className="option-option">
-                <input type="radio" id="semTarifasSim" name="semTarifas" value="Sim" />
-                <label htmlFor="semTarifasSim">Sim</label>
-              </div>
-              <div className="option-option">
-                <input type="radio" id="semTarifasNao" name="semTarifas" value="Não" />
-                <label htmlFor="semTarifasNao">Não</label>
-              </div>
-            </div>
-          </div>
-        </div>
         
-        {/* Seção de dívidas */}
-        <div className="form-section" id="secaoDividas">
+        <div className="form-section">
           <h2>Dívidas</h2>
-          <label>Adicione suas dívidas:</label>
-          <div id="listaDividas">
-            {dividas.map(divida => (
-              <div key={divida.id} className="divida-item">
-                <div className="patrimonio-row">
-                  <label htmlFor={`descricaoDivida_${divida.id}`}>Descrição da dívida:</label>
-                  <input 
-                    type="text" 
-                    id={`descricaoDivida_${divida.id}`} 
-                    name={`descricaoDivida_${divida.id}`} 
-                    placeholder="Ex: Financiamento, Empréstimo, etc."
-                    onChange={(e) => atualizarDivida(divida.id, 'descricao', e.target.value)}
-                  />
-                </div>
-                
-                <div className="patrimonio-row">
-                  <label htmlFor={`valorDivida_${divida.id}`}>Valor total:</label>
-                  <input 
-                    type="text" 
-                    id={`valorDivida_${divida.id}`} 
-                    name={`valorDivida_${divida.id}`} 
-                    className="moeda" 
-                    placeholder="R$ 0,00"
-                    onChange={handleMoedaChange}
-                    onBlur={(e) => atualizarDivida(divida.id, 'valorTotal', e.target.value)}
-                  />
-                </div>
-                
-                {/* Campo para selecionar de quem é a dívida */}
-                <div className="patrimonio-row">
-                  <label htmlFor={`proprietarioDivida_${divida.id}`}>De quem é esta dívida:</label>
+          <p>Adicione informações sobre suas principais dívidas.</p>
+          
+          {dividas.map((divida) => (
+            <div key={divida.id} className="divida-item">
+              <button 
+                type="button" 
+                className="delete-btn" 
+                onClick={() => removerDivida(divida.id)}
+              >
+                Remover
+              </button>
+              
+              <div className="form-group">
+                <label htmlFor={`divida-descricao-${divida.id}`}>Descrição:</label>
+                <input 
+                  type="text" 
+                  id={`divida-descricao-${divida.id}`} 
+                  value={divida.descricao}
+                  onChange={(e) => atualizarDivida(divida.id, 'descricao', e.target.value)}
+                  placeholder="Ex: Financiamento, Empréstimo, Cartão de Crédito"
+                />
+              </div>
+              
+              <div className="form-group">
+                <label htmlFor={`divida-valor-${divida.id}`}>Valor Total:</label>
+                <input 
+                  type="text" 
+                  id={`divida-valor-${divida.id}`} 
+                  className="moeda"
+                  value={divida.valorTotal}
+                  onChange={(e) => {
+                    handleMoedaChange(e);
+                    atualizarDivida(divida.id, 'valorTotal', e.target.value);
+                  }}
+                  placeholder="R$ 0,00"
+                />
+              </div>
+              
+              {multiplasRendas && (
+                <div className="form-group">
+                  <label htmlFor={`divida-proprietario-${divida.id}`}>Proprietário da Dívida:</label>
                   <select 
-                    id={`proprietarioDivida_${divida.id}`} 
-                    name={`proprietarioDivida_${divida.id}`}
-                    onChange={(e) => atualizarDivida(divida.id, 'proprietario', e.target.value)}
+                    id={`divida-proprietario-${divida.id}`}
                     value={divida.proprietario}
+                    onChange={(e) => atualizarDivida(divida.id, 'proprietario', e.target.value)}
                   >
-                    <option value="principal">Sua (cliente principal)</option>
-                    {pessoasRenda.map(pessoa => (
-                      <option key={`option-divida-${pessoa.id}`} value={pessoa.id}>
-                        {pessoa.nome || 'Outra pessoa com renda'}
+                    <option value="principal">Cliente Principal</option>
+                    {pessoasRenda.map((pessoa) => (
+                      <option key={pessoa.id} value={pessoa.id}>
+                        {pessoa.nome || `Pessoa ${pessoa.id}`}
                       </option>
                     ))}
-                    <option value="conjunto">Conjunta (mais de uma pessoa)</option>
+                    <option value="conjunto">Em Conjunto</option>
                   </select>
                 </div>
-                
-                <button 
-                  type="button" 
-                  className="delete-btn" 
-                  onClick={() => removerDivida(divida.id)} 
-                  aria-label="Excluir dívida"
-                >
-                  Excluir
-                </button>
-              </div>
-            ))}
-          </div>
+              )}
+            </div>
+          ))}
+          
           <button 
             type="button" 
             className="btn btn-adicionar" 
             onClick={adicionarDivida}
           >
-            <span className="sr-only">Adicionar</span> Adicionar Dívida
+            + Adicionar Dívida
           </button>
         </div>
-
-        {/* Seção de informações adicionais */}
-        <div className="form-section" id="secaoInfoAdicional">
-          <h2>Informações Adicionais</h2>
+        
+        <div className="form-section">
+          <h2>Objetivos Financeiros</h2>
+          
           <div className="form-group">
-            <label htmlFor="infoAdicional">Existe alguma informação que você julgue relevante informar?</label>
-            <textarea id="infoAdicional" name="infoAdicional" className="info-adicional" placeholder="Digite aqui qualquer informação adicional que você considere importante..."></textarea>
+            <label htmlFor="objetivoCurto">Objetivos de Curto Prazo (até 1 ano):</label>
+            <textarea 
+              id="objetivoCurto" 
+              name="objetivoCurto" 
+              placeholder="Descreva seus objetivos financeiros de curto prazo"
+              rows="3"
+            ></textarea>
+          </div>
+          
+          <div className="form-group">
+            <label htmlFor="objetivoMedio">Objetivos de Médio Prazo (1 a 5 anos):</label>
+            <textarea 
+              id="objetivoMedio" 
+              name="objetivoMedio" 
+              placeholder="Descreva seus objetivos financeiros de médio prazo"
+              rows="3"
+            ></textarea>
+          </div>
+          
+          <div className="form-group">
+            <label htmlFor="objetivoLongo">Objetivos de Longo Prazo (mais de 5 anos):</label>
+            <textarea 
+              id="objetivoLongo" 
+              name="objetivoLongo" 
+              placeholder="Descreva seus objetivos financeiros de longo prazo"
+              rows="3"
+            ></textarea>
           </div>
         </div>
-
-        <button type="submit" className="btn btn-enviar" id="btnEnviar">Enviar Formulário</button>
+        
+        <div className="form-section">
+          <h2>Informações Adicionais</h2>
+          
+          <div className="form-group">
+            <label htmlFor="observacoes">Observações ou informações adicionais:</label>
+            <textarea 
+              id="observacoes" 
+              name="observacoes" 
+              className="info-adicional"
+              placeholder="Compartilhe qualquer informação adicional que considere relevante para o seu planejamento financeiro"
+            ></textarea>
+          </div>
+        </div>
+        
+        <button type="submit" className="btn btn-enviar">Enviar Formulário</button>
       </form>
     </>
   );
